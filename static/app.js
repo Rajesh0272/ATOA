@@ -91,6 +91,26 @@ function metric(label, value) {
   return '<div class="metric"><div class="num">' + value + '</div><div class="lbl">' + label + '</div></div>';
 }
 
+function executionSourceHtml(r) {
+  const executorNote = r.cache_hit && !r.website_changed
+    ? (r.tests_reexecuted > 0
+        ? 'Partial (' + r.tests_reexecuted + ' re-executed, ' + r.tests_reused + ' reused from cache)'
+        : 'No (all ' + r.tests_reused + ' cached results reused)')
+    : 'Yes (full run, ' + r.total_executed + ' test(s))';
+  const rows = [
+    ['Cache Hit', r.cache_hit ? 'Yes' : 'No'],
+    ['Website Changed', r.website_changed ? 'Yes' : 'No'],
+    ['Planner Executed', r.planner_executed ? 'Yes' : 'No'],
+    ['Generator Executed', r.generator_executed ? 'Yes' : 'No'],
+    ['Executor Executed', executorNote],
+    ['LLM Calls Saved', r.llm_calls_saved > 0 ? 'Yes (' + r.llm_calls_saved + ')' : 'No'],
+    ['Estimated Credit Saving', r.estimated_credit_saving || '0%'],
+  ];
+  return rows.map((row) =>
+    '<div class="gap-item"><b>' + row[0] + ':</b> ' + row[1] + '</div>'
+  ).join("");
+}
+
 function renderReport(r) {
   currentReport = r;
   document.getElementById("results").style.display = "block";
@@ -106,6 +126,8 @@ function renderReport(r) {
     metric("Escalated", r.escalated),
     metric("Blocked", r.blocked),
   ].join("");
+
+  document.getElementById("execution-source").innerHTML = executionSourceHtml(r);
 
   const gaps = r.coverage_gaps || [];
   document.getElementById("gaps").innerHTML = gaps.length

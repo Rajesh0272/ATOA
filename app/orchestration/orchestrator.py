@@ -88,7 +88,7 @@ class AIVAROrchestrator:
 
         self._print_cache_summary(cache_hit, changed, planner_executed, generator_executed, tests_reused, tests_reexecuted, llm_calls_saved, credit_saving)
 
-        return QualityReport(
+        report = QualityReport(
             run_id=uuid.uuid4().hex[:12],application_url=url,total_planned=len(plan.scenarios),total_generated=len(gen_tests),total_executed=len(results),
             passed=passed,healed=healed,failed=failed,escalated=esc,blocked=blocked,coverage_score=cov.score,coverage_gaps=cov.gaps,healer_actions=actions,risk=risk,
             scenarios=plan.scenarios,results=results,prd_gap=gap,intent=intent,
@@ -96,6 +96,12 @@ class AIVAROrchestrator:
             cache_hit=cache_hit, website_changed=changed, planner_executed=planner_executed, coverage_executed=coverage_executed, generator_executed=generator_executed,
             tests_reused=tests_reused, tests_skipped=tests_skipped, tests_reexecuted=tests_reexecuted, llm_calls_saved=llm_calls_saved, estimated_credit_saving=credit_saving,
         )
+        # Persist the report alongside this URL's other cached artifacts so it
+        # remains available (e.g. across a server restart) without re-running
+        # any AI models - a fresh report is always rebuilt from cheap, local
+        # cached/execution data, never from a stale on-disk copy.
+        cache.save_report(report.model_dump())
+        return report
 
     def _execute(self, tests, parallel, artifact_root):
         if not tests:

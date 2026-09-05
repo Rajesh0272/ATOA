@@ -69,6 +69,7 @@ class ExecutionCache:
         self.tests_dir = self.dir / "generated_tests"
         self.tests_path = self.tests_dir / "tests.json"
         self.results_path = self.dir / "results.json"
+        self.report_path = self.dir / "report.json"
 
     # ------------------------------------------------------------------
     # Fingerprinting
@@ -116,6 +117,15 @@ class ExecutionCache:
         except Exception:
             return None
 
+    def load_report(self) -> Optional[dict]:
+        """Load the last persisted QualityReport (as a plain dict) for this URL."""
+        if not self.report_path.exists():
+            return None
+        try:
+            return json.loads(self.report_path.read_text(encoding="utf-8"))
+        except Exception:
+            return None
+
     def load_plan(self) -> Optional[TestPlan]:
         if not self.plan_path.exists():
             return None
@@ -158,6 +168,13 @@ class ExecutionCache:
         self.results_path.write_text(
             json.dumps([r.model_dump() for r in results], indent=2), encoding="utf-8"
         )
+
+    def save_report(self, report: dict) -> None:
+        """Persist the full QualityReport (as a plain dict) alongside this
+        URL's other cached artifacts, so a report is always durably
+        available for this URL even if the in-memory report store
+        (app.reporting.store) is cleared by a server restart."""
+        self.report_path.write_text(json.dumps(report, indent=2, default=str), encoding="utf-8")
 
     def save_metadata(self, fingerprint: dict, tests: list[GeneratedTest]) -> dict:
         meta = {
