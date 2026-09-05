@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AIVAR Report</title>
+<link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><span class="dot"></span> AIVAR</div>
+  <div class="tagline">Shared Test Quality Report</div>
+</header>
+<main>
+  <div class="card" style="margin-bottom:20px">
+    <h2>Quality report <span id="risk-badge"></span></h2>
+    <div class="metrics" id="metrics"></div>
+    <p id="summary-text" style="color:var(--muted);font-size:13px"></p>
+    <div class="actions-row">
+      <button class="ghost" id="pdf-btn">Download PDF</button>
+      <button class="ghost" id="json-btn">View raw JSON</button>
+    </div>
+  </div>
+  <div class="card" style="margin-bottom:20px">
+    <h2>Coverage gaps remaining</h2>
+    <div id="gaps"></div>
+  </div>
+  <div class="card" style="margin-bottom:20px">
+    <h2>Healer actions</h2>
+    <div class="pill-list" id="healer-actions"></div>
+  </div>
+  <div class="card" style="margin-bottom:20px">
+    <h2>Scenario outcomes</h2>
+    <table>
+      <thead><tr><th>Test</th><th>Status</th><th>Duration</th><th>Note</th></tr></thead>
+      <tbody id="results-table"></tbody>
+    </table>
+  </div>
+  <div class="card" id="prd-card" style="display:none">
+    <h2>PRD coverage gap analysis</h2>
+    <p id="prd-summary" style="color:var(--muted);font-size:13px"></p>
+    <div id="prd-items"></div>
+  </div>
+</main>
+<script>
+  const runId = location.pathname.split("/").filter(Boolean).pop();
+  document.getElementById("pdf-btn").onclick = () => window.open("/report/" + runId + "/pdf", "_blank");
+  document.getElementById("json-btn").onclick = () => window.open("/report/" + runId + "/json", "_blank");
+
+  function metric(label, value) {
+    return '<div class="metric"><div class="num">' + value + '</div><div class="lbl">' + label + '</div></div>';
+  }
+
+  fetch("/report/" + runId + "/json")
+    .then((r) => r.json())
+    .then((r) => {
+      document.getElementById("risk-badge").innerHTML = '<span class="badge ' + r.risk + '">' + r.risk + ' RISK</span>';
+      document.getElementById("summary-text").textContent = r.summary;
+      document.getElementById("metrics").innerHTML = [
+        metric("Planned", r.total_planned),
+        metric("Generated", r.total_generated),
+        metric("Executed", r.total_executed),
+        metric("Passed", r.passed),
+        metric("Healed", r.healed),
+        metric("Failed", r.failed),
+        metric("Escalated", r.escalated),
+        metric("Coverage", Math.round(r.coverage_score * 100) + "%"),
+      ].join("");
+
+      const gaps = r.coverage_gaps || [];
+      document.getElementById("gaps").innerHTML = gaps.length
+        ? gaps.map((g) => '<div class="gap-item"><b>' + g.missing_scenario + '</b> (' + g.category + ') &mdash; <span class="risk ' + g.risk + '">' + g.risk + ' risk</span><br><span style="color:var(--muted)">' + g.reason + '</span></div>').join("")
+        : '<span style="color:var(--muted);font-size:13px">No coverage gaps remaining.</span>';
+
+      const actions = r.healer_actions || [];
+      document.getElementById("healer-actions").innerHTML = actions.length
+        ? actions.map((a) => '<span class="pill">' + a + '</span>').join("")
+        : '<span style="color:var(--muted);font-size:13px">No healer actions were required.</span>';
+
+      const results = r.results || [];
+      document.getElementById("results-table").innerHTML = results
+        .map((res) => '<tr><td>' + res.test_id + '</td><td class="status ' + res.status + '">' + res.status + '</td><td>' + res.duration_ms + ' ms</td><td>' + (res.healing_action || res.error || "-") + '</td></tr>')
+        .join("");
+
+      const prd = r.prd_gap;
+      const prdCard = document.getElementById("prd-card");
+      if (prd && prd.requirements_considered) {
+        prdCard.style.display = "block";
+        document.getElementById("prd-summary").textContent =
+          prd.requirements_covered + "/" + prd.requirements_considered + " PRD requirements matched to a test scenario.";
+        document.getElementById("prd-items").innerHTML = prd.items
+          .map((i) => '<div class="gap-item">' + (i.covered ? "\u2705" : "\u274c") + ' ' + i.requirement + '</div>')
+          .join("");
+      }
+    });
+</script>
+</body>
+</html>

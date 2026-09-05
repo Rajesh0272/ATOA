@@ -407,9 +407,25 @@ Each test step MUST use exactly one of these actions:
 2. fill
 3. select
 4. click
-5. assert_visible
-6. assert_not_visible
-7. assert_text
+5. check
+6. uncheck
+7. hover
+8. press
+9. assert_visible
+10. assert_not_visible
+11. assert_text
+12. assert_url
+13. assert_count
+14. assert_checked
+15. assert_enabled
+16. assert_disabled
+
+Prefer the simplest action that expresses the intended user behavior or
+business assertion. Use check/uncheck for checkboxes, hover for exposing
+hidden menus, press for keyboard interactions (e.g. "Enter"), assert_url
+for verifying navigation/redirect outcomes, and assert_count/assert_checked/
+assert_enabled/assert_disabled for state-based assertions when they express
+the expected outcome more precisely than assert_visible/assert_text.
 
 ============================================================
 STEP FORMAT
@@ -613,7 +629,7 @@ IMPORTANT:
       "name": "string",
       "steps": [
         {
-          "action": "navigate | fill | select | click | assert_visible | assert_not_visible | assert_text",
+          "action": "navigate | fill | select | click | check | uncheck | hover | press | assert_visible | assert_not_visible | assert_text | assert_url | assert_count | assert_checked | assert_enabled | assert_disabled",
           "target": {
             "role": "string",
             "name": "string",

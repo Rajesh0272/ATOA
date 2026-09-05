@@ -6,3 +6,6 @@ python-dotenv
 google-genai
 sarvamai
 pytest
+python-multipart
+qrcode[pil]
+reportlab
