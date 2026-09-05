@@ -1,0 +1,13 @@
+<svg width="30" height="30" viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="AIVAR logo">
+  <defs>
+    <linearGradient id="aivarGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7a68ff" />
+      <stop offset="100%" stop-color="#5f4fe0" />
+    </linearGradient>
+  </defs>
+  <circle cx="15" cy="15" r="14" fill="url(#aivarGradient)" />
+  <path d="M15 6 L23 10.5 V17.5 C23 22 19.6 24.6 15 26 C10.4 24.6 7 22 7 17.5 V10.5 Z"
+        fill="#ffffff" opacity="0.95" />
+  <path d="M11.5 15.2 L14 17.7 L18.7 12.3"
+        fill="none" stroke="#5f4fe0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+</svg>

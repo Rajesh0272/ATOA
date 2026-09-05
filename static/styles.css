@@ -43,12 +43,11 @@ header.topbar {
   color: var(--brand-dark);
 }
 
-.brand .dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: var(--brand);
-  box-shadow: 0 0 0 4px var(--brand-light);
+.brand .brand-logo {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: block;
 }
 
 .tagline {

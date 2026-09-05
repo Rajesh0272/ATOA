@@ -8,7 +8,7 @@
 </head>
 <body>
 <header class="topbar">
-  <div class="brand"><span class="dot"></span> AIVAR</div>
+  <div class="brand"><img src="/static/logo.svg" alt="AIVAR logo" class="brand-logo" /> AIVAR</div>
   <div class="tagline">Autonomous Test Orchestration · Aivar Innovations</div>
 </header>
 
@@ -19,7 +19,7 @@
       <h2>Run pipeline</h2>
       <form id="run-form">
         <label>Application URL *</label>
-        <input id="url" type="url" placeholder="https://your-app.example" value="http://127.0.0.1:9000" required />
+        <input id="url" type="url" placeholder="https://your-app.example" required />
 
         <label>Describe intent (optional)</label>
         <textarea id="description" placeholder="e.g. focus on checkout and authentication flows"></textarea>
@@ -41,8 +41,9 @@
 
         <div class="toggle-line">
           <span>Run scenarios in parallel</span>
-          <input type="checkbox" id="parallel" checked />
+          <input type="checkbox" id="parallel" disabled />
         </div>
+        <p style="color:var(--muted);font-size:11px;margin-top:-6px">Requires a purchased Browserless.io plan (parallel/concurrent browser sessions are not available on the free tier).</p>
 
         <button class="primary" type="submit" id="run-btn">Run AIVAR</button>
         <button class="ghost" type="button" id="clear-cache-btn" style="margin-top:10px;width:100%">🗑 Clear Cache</button>
