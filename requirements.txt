@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+playwright
+pydantic
+python-dotenv
+google-genai
+sarvamai
+pytest

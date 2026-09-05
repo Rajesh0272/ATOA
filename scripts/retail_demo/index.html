@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Northstar Market</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; color: #172033; background: #f6f8fb; }
+    header { background: #173b6c; color: white; padding: 24px max(24px, calc((100% - 1000px) / 2)); }
+    header h1 { margin: 0 0 12px; }
+    main { max-width: 1000px; margin: 28px auto; padding: 0 24px; }
+    .toolbar, .product, .cart, .checkout { background: white; border: 1px solid #dce3ee; border-radius: 10px; padding: 18px; margin-bottom: 18px; }
+    .toolbar { display: flex; gap: 12px; }
+    input, select { border: 1px solid #aebbd0; border-radius: 6px; padding: 10px; font-size: 1rem; }
+    #search { flex: 1; }
+    .products { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+    .product h3 { margin-top: 0; }
+    .price { font-weight: bold; color: #173b6c; }
+    button { background: #176b52; border: 0; border-radius: 6px; color: white; cursor: pointer; padding: 10px 14px; }
+    button.secondary { background: #52657e; }
+    button:disabled { background: #aebbd0; cursor: not-allowed; }
+    .cart-row { align-items: center; border-bottom: 1px solid #e7ebf2; display: flex; gap: 12px; justify-content: space-between; padding: 10px 0; }
+    .cart-row:last-child { border-bottom: 0; }
+    .message { min-height: 22px; margin-top: 10px; }
+    .error { color: #b42318; }
+    .success { color: #176b52; }
+    .total { font-size: 1.2rem; font-weight: bold; text-align: right; }
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Northstar Market</h1>
+    <div>Everyday goods, simple checkout.</div>
+  </header>
+  <main>
+    <section class="toolbar" aria-label="Product search">
+      <label for="search" hidden>Search products</label>
+      <input id="search" name="search" type="search" placeholder="Search products">
+      <label for="category" hidden>Filter by category</label>
+      <select id="category" name="category">
+        <option value="all">All categories</option>
+        <option value="home">Home</option>
+        <option value="tech">Tech</option>
+        <option value="outdoor">Outdoor</option>
+      </select>
+    </section>
+
+    <section>
+      <h2>Products</h2>
+      <div id="products" class="products"></div>
+      <p id="empty" class="message" hidden>No products match your search.</p>
+    </section>
+
+    <section class="cart" aria-labelledby="cart-title">
+      <h2 id="cart-title">Shopping cart</h2>
+      <div id="cart-items"></div>
+      <p id="cart-empty" class="message">Your cart is empty.</p>
+      <p id="cart-total" class="total">Total: $0.00</p>
+      <button id="checkout-button" disabled>Proceed to checkout</button>
+    </section>
+
+    <section id="checkout" class="checkout" hidden>
+      <h2>Checkout</h2>
+      <form id="checkout-form">
+        <label for="customer-name">Full name</label><br>
+        <input id="customer-name" name="customer_name" required><br><br>
+        <label for="customer-email">Email</label><br>
+        <input id="customer-email" name="customer_email" type="email" required><br><br>
+        <label for="address">Shipping address</label><br>
+        <input id="address" name="address" required><br><br>
+        <button type="submit">Place order</button>
+        <p id="checkout-message" class="message" role="status"></p>
+      </form>
+    </section>
+  </main>
+
+  <script>
+    const products = [
+      { id: "mug", name: "Ceramic Travel Mug", category: "home", price: 18.99, description: "Insulated  twelve-ounce mug." },
+      { id: "lamp", name: "Desk Lamp", category: "home", price: 34.50, description: "Adjustable LED lamp for your desk." },
+      { id: "keyboard", name: "Wireless Keyboard", category: "tech", price: 49.00, description: "Compact keyboard with quiet keys." },
+      { id: "speaker", name: "Bluetooth Speaker", category: "tech", price: 64.95, description: "Portable speaker with all-day battery." },
+      { id: "bottle", name: "Trail Water Bottle", category: "outdoor", price: 22.00, description: "Leak-resistant stainless steel bottle." }
+    ];
+    const cart = new Map();
+    const money = value => `$${value.toFixed(2)}`;
+    const productList = document.getElementById("products");
+    const search = document.getElementById("search");
+    const category = document.getElementById("category");
+
+    function renderProducts() {
+      const query = search.value.trim().toLowerCase();
+      const selected = category.value;
+      const visible = products.filter(product =>
+        (selected === "all" || product.category === selected) &&
+        (!query || `${product.name} ${product.description}`.toLowerCase().includes(query))
+      );
+      productList.innerHTML = visible.map(product => `
+        <article class="product" data-product-id="${product.id}">
+          <h3>${product.name}</h3>
+          <p>${product.description}</p>
+          <p class="price">${money(product.price)}</p>
+          <button class="add-to-cart" data-product-id="${product.id}">Add to cart</button>
+        </article>
+      `).join("");
+      document.getElementById("empty").hidden = visible.length !== 0;
+    }
+
+    function renderCart() {
+      const items = [...cart.entries()];
+      document.getElementById("cart-empty").hidden = items.length !== 0;
+      document.getElementById("cart-items").innerHTML = items.map(([id, quantity]) => {
+        const product = products.find(item => item.id === id);
+        return `<div class="cart-row" data-cart-id="${id}">
+          <span>${product.name} — ${money(product.price * quantity)}</span>
+          <label>Quantity
+            <input class="quantity" data-product-id="${id}" type="number" min="1" max="10" value="${quantity}">
+          </label>
+          <button class="secondary remove-from-cart" data-product-id="${id}">Remove</button>
+        </div>`;
+      }).join("");
+      const total = items.reduce((sum, [id, quantity]) => {
+        return sum + products.find(item => item.id === id).price * quantity;
+      }, 0);
+      document.getElementById("cart-total").textContent = `Total: ${money(total)}`;
+      document.getElementById("checkout-button").disabled = items.length === 0;
+    }
+
+    document.addEventListener("click", event => {
+      const id = event.target.dataset.productId;
+      if (!id) return;
+      if (event.target.classList.contains("add-to-cart")) cart.set(id, (cart.get(id) || 0) + 1);
+      if (event.target.classList.contains("remove-from-cart")) cart.delete(id);
+      if (event.target.classList.contains("add-to-cart") || event.target.classList.contains("remove-from-cart")) renderCart();
+    });
+    document.addEventListener("change", event => {
+      if (!event.target.classList.contains("quantity")) return;
+      const quantity = Math.max(1, Math.min(10, Number(event.target.value) || 1));
+      cart.set(event.target.dataset.productId, quantity);
+      renderCart();
+    });
+    search.addEventListener("input", renderProducts);
+    category.addEventListener("change", renderProducts);
+    document.getElementById("checkout-button").addEventListener("click", () => {
+      document.getElementById("checkout").hidden = false;
+      document.getElementById("customer-name").focus();
+    });
+    document.getElementById("checkout-form").addEventListener("submit", event => {
+      event.preventDefault();
+      document.getElementById("checkout-message").className = "message success";
+      document.getElementById("checkout-message").textContent = "Order placed successfully.";
+      cart.clear();
+      renderCart();
+    });
+    renderProducts();
+    renderCart();
+  </script>
+</body>
+</html>
