@@ -56,12 +56,13 @@ class ExecutionCache:
         """
         normalized = json.dumps(
             {
-                "title": obs.title,
+                "title": obs.title or "",
                 "elements": sorted(
-                    [e.tag, e.text, e.role, e.name, e.label] for e in obs.elements
+                    [e.tag or "", e.text or "", e.role or "", e.name or "", e.label or ""]
+                    for e in obs.elements
                 ),
-                "links": sorted(obs.links),
-                "forms": sorted(obs.forms),
+                "links": sorted(link or "" for link in obs.links),
+                "forms": sorted(form or "" for form in obs.forms),
             },
             sort_keys=True,
         )

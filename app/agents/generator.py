@@ -1,4 +1,5 @@
 import json
+from urllib.parse import urljoin, urlsplit, urlunsplit
 
 from app.llm.client import LLMClient
 from app.models.schemas import (
@@ -177,6 +178,59 @@ class GeneratorAgent:
                 step.target = {"selector": f'button.add-to-cart[data-product-id="{hint}"]'}
             elif element.tag in {"input", "select", "textarea", "button"}:
                 step.target = {"id": hint}
+
+    @staticmethod
+    def _drop_ungrounded_navigations(test, observation):
+        """Remove navigate steps to URLs/routes the LLM invented.
+
+        Single-page apps commonly reveal sections (e.g. a checkout panel)
+        via client-side JS rather than a real server route. If the LLM
+        emits a `navigate` step to a path that was never observed (not the
+        application URL itself and not one of the observed `links`), that
+        request will 404 against a real server, burning a Playwright
+        execution plus a healer LLM call on an unfixable, ungrounded step.
+        Drop such steps instead so the test proceeds via the actual
+        in-page controls (e.g. a click on the observed "Proceed to
+        checkout" button) that the LLM should have used.
+        """
+        if not observation:
+            return
+
+        def _norm(url):
+            if not url:
+                return None
+            resolved = urljoin(observation.url, url)
+            parts = urlsplit(resolved)
+            # Ignore scheme/query/fragment differences; compare host+path only.
+            return urlunsplit(("", parts.netloc, parts.path.rstrip("/"), "", ""))
+
+        allowed = {_norm(observation.url)} | {_norm(link) for link in observation.links}
+        kept = []
+        for index, step in enumerate(test.steps):
+            if step.action == "navigate" and index != 0 and _norm(step.value) not in allowed:
+                continue  # drop hallucinated/ungrounded route
+            kept.append(step)
+        test.steps = kept
+
+    @staticmethod
+    def _repair_business_assertions(test):
+        """Trim declared business_assertions that have no matching step.
+
+        The generator prompt requires every business_assertions entry to
+        have a corresponding assert_visible/assert_not_visible/assert_text
+        step, but the LLM sometimes violates this, which previously caused
+        TestExecutor to raise "Test declares N business assertion(s) but
+        contains only M executable assertion step(s)" - a false FAILED
+        result that isn't a locator issue and can't be healed. Cap the
+        declared assertions to what the test can actually execute so valid
+        tests aren't discarded over a documentation-only mismatch.
+        """
+        assertion_steps = sum(
+            step.action in {"assert_visible", "assert_not_visible", "assert_text"}
+            for step in test.steps
+        )
+        if len(test.business_assertions) > assertion_steps:
+            test.business_assertions = test.business_assertions[:assertion_steps]
 
     @staticmethod
     def _normalize_checkout_order(test):
@@ -371,6 +425,8 @@ class GeneratorAgent:
                 self._add_cart_prerequisite(test, observation)
                 self._normalize_observed_targets(test, observation)
                 self._normalize_checkout_order(test)
+                self._drop_ungrounded_navigations(test, observation)
+                self._repair_business_assertions(test)
 
             result = GenerationResult(tests=tests)
 
@@ -558,6 +614,12 @@ For every planned scenario:
 11. Every business_assertions entry MUST have a corresponding
     assert_visible, assert_not_visible, or assert_text step. Do not describe an assertion that
     cannot be executed from an observed target and value.
+12. NEVER emit a "navigate" step to a URL/path that is not the application_url itself or one
+    of the URLs listed in application_observation.links. Many applications are single-page
+    apps where sections such as a checkout panel are revealed by client-side JavaScript, not
+    a real server route. To reveal such a section, click the observed control that reveals it
+    (for example a "Proceed to checkout" button) instead of navigating to an invented URL.
+    Navigating to an unobserved route will 404 against a real server and cannot be healed.
 
 The test must represent the business intent of the scenario.
 
@@ -737,6 +799,9 @@ IMPORTANT:
             self._add_authentication_prerequisite(test, observation, credentials)
             self._add_cart_prerequisite(test, observation)
             self._normalize_observed_targets(test, observation)
+            self._normalize_checkout_order(test)
+            self._drop_ungrounded_navigations(test, observation)
+            self._repair_business_assertions(test)
 
         print()
         print("[GENERATOR OUTPUT - VALIDATED]")
