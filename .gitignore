@@ -6,3 +6,4 @@ artifacts/
 generated_tests/
 .pytest_cache/
 .DS_Store
+code.zip

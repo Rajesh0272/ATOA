@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+artifacts/
+generated_tests/
+.pytest_cache/
+.DS_Store
+.git/
+.gitignore
+code.zip
+Dockerfile
+.dockerignore
+node_modules/
