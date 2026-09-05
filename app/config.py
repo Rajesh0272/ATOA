@@ -21,6 +21,15 @@ class Settings:
 
     # AIVAR
     HEADLESS = os.getenv("AIVAR_HEADLESS", "false").lower() == "true"
+
+    # Remote browser (CDP). Set this to a browser-as-a-service websocket
+    # endpoint (e.g. Browserless.io/Browserbase) to connect to an already
+    # running Chromium instead of launching one locally. Required on hosts
+    # that cannot bundle/persist Playwright's browser binaries at runtime
+    # (e.g. Vercel's Python serverless functions, which rebuild the Python
+    # dependency tree from requirements.txt into an ephemeral /tmp on every
+    # cold start and never re-run `playwright install`).
+    BROWSER_WS_ENDPOINT = os.getenv("BROWSER_WS_ENDPOINT", "")
     COVERAGE_THRESHOLD = float(os.getenv("COVERAGE_THRESHOLD", "0.75"))
     MAX_REPLAN_ATTEMPTS = int(os.getenv("MAX_REPLAN_ATTEMPTS", "2"))
     MAX_HEAL_ATTEMPTS = int(os.getenv("MAX_HEAL_ATTEMPTS", "1"))
