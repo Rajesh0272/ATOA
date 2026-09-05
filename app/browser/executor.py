@@ -17,7 +17,9 @@ class TestExecutor:
                 artifacts_dir=str(td),
             )
         with sync_playwright() as p:
-            b=p.chromium.launch(headless=settings.HEADLESS); page=b.new_page()
+            b = p.chromium.launch(
+                headless=True,
+                args=["--no-sandbox","--disable-setuid-sandbox","--disable-dev-shm-usage","--disable-gpu"]); page=b.new_page()
             try:
                 self._run(page,test.steps)
                 self._validate_business_assertions(test)
