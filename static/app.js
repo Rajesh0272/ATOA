@@ -82,7 +82,7 @@ function renderReport(r) {
     metric("Healed", r.healed),
     metric("Failed", r.failed),
     metric("Escalated", r.escalated),
-    metric("Coverage", Math.round(r.coverage_score * 100) + "%"),
+    metric("Blocked", r.blocked),
   ].join("");
 
   const gaps = r.coverage_gaps || [];
