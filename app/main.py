@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from typing import Optional
 
 from app.orchestration.orchestrator import AIVAROrchestrator
-from app.orchestration.cache import clear_cache
+from app.orchestration.cache import clear_cache, ExecutionCache
 from app.models.schemas import TestCredentials
 from app.reporting import store, pdf as pdf_report
 # NOTE: QR code sharing is temporarily disabled. Re-enable by uncommenting
@@ -67,6 +67,20 @@ def cache_clear(url: Optional[str] = Form(None)):
     """
     removed = clear_cache(url or None)
     return {"cleared": removed, "count": len(removed)}
+
+
+@app.get("/cache/report")
+def cache_report(url: str):
+    """Return the last persisted report for a URL directly from its cache
+    directory, without invoking the Planner/Coverage/Generator/Executor or
+    any AI model. Useful for redisplaying a prior run's report (e.g. after
+    a server restart cleared the in-memory report store)."""
+    report = ExecutionCache(url).load_report()
+    if report is None:
+        raise HTTPException(status_code=404, detail="No cached report found for this URL")
+    from app.models.schemas import QualityReport
+    store.save(QualityReport.model_validate(report))
+    return report
 
 
 @app.get("/reports")
