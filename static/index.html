@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AIVAR — Autonomous Test Orchestration Agent</title>
+<link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><span class="dot"></span> AIVAR</div>
+  <div class="tagline">Autonomous Test Orchestration · Aivar Innovations</div>
+</header>
+
+<main>
+  <div class="grid">
+    <!-- Run configuration -->
+    <section class="card">
+      <h2>Run pipeline</h2>
+      <form id="run-form">
+        <label>Application URL *</label>
+        <input id="url" type="url" placeholder="https://your-app.example" value="http://127.0.0.1:9000" required />
+
+        <label>Describe intent (optional)</label>
+        <textarea id="description" placeholder="e.g. focus on checkout and authentication flows"></textarea>
+
+        <label>Product requirements document (optional)</label>
+        <div class="file-drop" id="file-drop">Click to attach a PRD (.txt/.md)</div>
+        <input type="file" id="prd_file" accept=".txt,.md,.doc,.docx,.pdf" style="display:none" />
+
+        <div class="row">
+          <div>
+            <label>Username (optional)</label>
+            <input id="username" type="text" placeholder="test-user" />
+          </div>
+          <div>
+            <label>Password (optional)</label>
+            <input id="password" type="password" placeholder="••••••••" />
+          </div>
+        </div>
+
+        <div class="toggle-line">
+          <span>Run scenarios in parallel</span>
+          <input type="checkbox" id="parallel" checked />
+        </div>
+
+        <button class="primary" type="submit" id="run-btn">Run AIVAR</button>
+      </form>
+    </section>
+
+    <!-- Output -->
+    <section>
+      <div class="card" style="margin-bottom:20px">
+        <h2>Pipeline stages</h2>
+        <div class="stepper" id="stepper">
+          <div class="step" data-step="explore">Explore</div>
+          <div class="step" data-step="plan">Plan</div>
+          <div class="step" data-step="coverage">Coverage</div>
+          <div class="step" data-step="generate">Generate</div>
+          <div class="step" data-step="execute">Execute</div>
+          <div class="step" data-step="heal">Heal</div>
+          <div class="step" data-step="report">Report</div>
+        </div>
+      </div>
+
+      <div id="out-empty">Enter a URL and run AIVAR to see the test quality report here.</div>
+
+      <div id="results" style="display:none">
+        <div class="card" style="margin-bottom:20px">
+          <h2>Quality report <span id="risk-badge"></span></h2>
+          <div class="metrics" id="metrics"></div>
+          <p id="summary-text" style="color:var(--muted);font-size:13px"></p>
+          <div class="actions-row">
+            <button class="ghost" id="pdf-btn">⬇ Download PDF</button>
+            <button class="ghost" id="qr-btn">▦ View QR to share report</button>
+            <button class="ghost" id="json-btn">{ } View raw JSON</button>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:20px">
+          <h2>Coverage gaps remaining</h2>
+          <div id="gaps"></div>
+        </div>
+
+        <div class="card" style="margin-bottom:20px">
+          <h2>Healer actions</h2>
+          <div class="pill-list" id="healer-actions"></div>
+        </div>
+
+        <div class="card" style="margin-bottom:20px">
+          <h2>Scenario outcomes</h2>
+          <table>
+            <thead><tr><th>Test</th><th>Status</th><th>Duration</th><th>Note</th></tr></thead>
+            <tbody id="results-table"></tbody>
+          </table>
+        </div>
+
+        <div class="card" id="prd-card" style="display:none;margin-bottom:20px">
+          <h2>PRD coverage gap analysis</h2>
+          <p id="prd-summary" style="color:var(--muted);font-size:13px"></p>
+          <div id="prd-items"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Recent runs</h2>
+        <div id="history"><span style="color:var(--muted);font-size:13px">No runs yet.</span></div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<div class="modal-bg" id="qr-modal">
+  <div class="modal">
+    <h3 style="color:var(--brand-dark);margin-top:0">Scan to view report</h3>
+    <img id="qr-img" src="" alt="QR code" />
+    <p style="font-size:12px;color:var(--muted)">Opens the shareable report page on another device</p>
+    <button class="ghost" onclick="document.getElementById('qr-modal').classList.remove('open')">Close</button>
+  </div>
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

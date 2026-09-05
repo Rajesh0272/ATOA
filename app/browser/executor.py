@@ -85,6 +85,8 @@ class TestExecutor:
                 if st.action=="navigate":
                     r=page.goto(st.value,wait_until="domcontentloaded",timeout=15000)
                     if r is not None and r.status>=500: raise RuntimeError(f"HTTP {r.status} Internal Server Error")
+                elif st.action=="assert_url":
+                    page.wait_for_url(f"**{st.value}**" if st.value and "*" not in st.value else (st.value or "**"),timeout=8000)
                 else:
                     if not st.target:
                         raise ValueError(
@@ -161,8 +163,21 @@ class TestExecutor:
                                 )
                             loc.select_option(match)
                     elif st.action=="click": loc.click(timeout=5000)
+                    elif st.action=="check": loc.check(timeout=5000)
+                    elif st.action=="uncheck": loc.uncheck(timeout=5000)
+                    elif st.action=="hover": loc.hover(timeout=5000)
+                    elif st.action=="press": loc.press(st.value or "Enter",timeout=5000)
                     elif st.action=="assert_visible": loc.wait_for(state="visible",timeout=5000)
                     elif st.action=="assert_not_visible": loc.wait_for(state="hidden",timeout=5000)
+                    elif st.action=="assert_checked":
+                        if not loc.is_checked(): raise AssertionError("Expected element to be checked")
+                    elif st.action=="assert_enabled":
+                        if not loc.is_enabled(): raise AssertionError("Expected element to be enabled")
+                    elif st.action=="assert_disabled":
+                        if loc.is_enabled(): raise AssertionError("Expected element to be disabled")
+                    elif st.action=="assert_count":
+                        expected=int(st.value or "0")
+                        if loc.count()!=expected: raise AssertionError(f"Expected {expected} matching elements, found {loc.count()}")
                     elif st.action=="assert_text":
                         if st.value not in loc.inner_text():
                             text_loc = page.get_by_text(st.value or "", exact=False)

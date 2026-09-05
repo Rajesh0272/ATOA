@@ -3,7 +3,7 @@ from app.llm.client import LLMClient
 from app.models.schemas import *
 class PlannerAgent:
     def __init__(self): self.llm=LLMClient()
-    def plan(self, obs):
+    def plan(self, obs, prd_text=None, intent=None):
         print()
         print("=" * 70)
         print("[AIVAR - STEP 2] TEST PLANNER")
@@ -15,6 +15,10 @@ class PlannerAgent:
         print(f"Elements available : {len(obs.elements)}")
         print(f"Links available : {len(obs.links)}")
         print(f"Forms available : {len(obs.forms)}")
+        if intent:
+            print(f"Developer intent : {intent}")
+        if prd_text:
+            print(f"PRD supplied : {len(prd_text)} chars")
 
         for element in obs.elements:
             print(
@@ -89,7 +93,8 @@ class PlannerAgent:
                 ],
                 assumptions=[
                     "The application exposes a login flow."
-                ]
+                ] + ([f"Developer intent considered: {intent}"] if intent else [])
+                  + (["A PRD excerpt was supplied and used to scope priorities."] if prd_text else [])
             )
 
             print("[PLANNER OUTPUT - MOCK]")
@@ -139,9 +144,33 @@ Required JSON shape:
   ],
   "assumptions": ["string"]
 }
+
+============================================================
+DEVELOPER INTENT (optional)
+============================================================
+
+If a developer intent statement is supplied, prioritize scenarios that
+reflect it (e.g. "focus on checkout and authentication flows" should bias
+scenario selection toward those flows) while still respecting grounding
+rules and never inventing unobserved functionality.
+
+============================================================
+PRODUCT REQUIREMENTS DOCUMENT (optional)
+============================================================
+
+If a PRD excerpt is supplied, use it only to prioritize and scope which
+observed functionality to test. Do not create scenarios for PRD
+requirements that have no supporting evidence in the application
+observation; instead note the gap in assumptions.
 """
 
-        user_prompt = json.dumps(
+        context_prompt = ""
+        if intent:
+            context_prompt += f"\nDEVELOPER INTENT:\n{intent}\n"
+        if prd_text:
+            context_prompt += f"\nPRODUCT REQUIREMENTS DOCUMENT (excerpt):\n{prd_text[:6000]}\n"
+
+        user_prompt = context_prompt + json.dumps(
             obs.model_dump(),
             indent=2
         )

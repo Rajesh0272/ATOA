@@ -1,16 +1,115 @@
-from fastapi import FastAPI,HTTPException
-from fastapi.responses import HTMLResponse
-from pydantic import BaseModel, AnyHttpUrl
+from fastapi import FastAPI, HTTPException, UploadFile, Form, File, Request
+from fastapi.responses import HTMLResponse, Response, FileResponse
+from fastapi.staticfiles import StaticFiles
 from typing import Optional
+
 from app.orchestration.orchestrator import AIVAROrchestrator
 from app.models.schemas import TestCredentials
-app=FastAPI(title="AIVAR Autonomous QA")
-class RunRequest(BaseModel):
-    url: AnyHttpUrl
-    credentials: Optional[TestCredentials] = None
-@app.get("/",response_class=HTMLResponse)
-def home(): return """<!doctype html><html><head><title>AIVAR</title><style>body{font-family:Arial;max-width:900px;margin:40px auto}input{width:70%;padding:12px;margin:4px 0}button{padding:12px}pre{background:#f4f4f4;padding:15px;white-space:pre-wrap}</style></head><body><h1>AIVAR — Autonomous Test Orchestration Agent</h1><p>Enter a web application URL and run the autonomous QA lifecycle.</p><input id='url' value='http://127.0.0.1:9000'><br><input id='username' placeholder='Optional test username'><br><input id='password' type='password' placeholder='Optional test password'><br><button onclick='run()'>Run AIVAR</button><pre id='out'>Ready.</pre><script>async function run(){out.textContent='Running...';try{let credentials={username:document.getElementById('username').value||null,password:document.getElementById('password').value||null};let r=await fetch('/run',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:document.getElementById('url').value,credentials:credentials.username&&credentials.password?credentials:null})});out.textContent=JSON.stringify(await r.json(),null,2)}catch(e){out.textContent=e}}</script></body></html>"""
+from app.reporting import store, pdf as pdf_report
+# NOTE: QR code sharing is temporarily disabled. Re-enable by uncommenting
+# the import below plus the /report/{run_id}/qr route further down.
+# from app.reporting import qr as qr_report
+
+app = FastAPI(title="AIVAR Autonomous QA")
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+
+@app.get("/", response_class=HTMLResponse)
+def home():
+    return FileResponse("static/index.html")
+
+
 @app.post("/run")
-def run(req:RunRequest):
-    try:return AIVAROrchestrator().run(str(req.url), req.credentials).model_dump()
-    except Exception as e: raise HTTPException(status_code=500,detail=str(e))
+def run(
+    url: str = Form(...),
+    username: Optional[str] = Form(None),
+    password: Optional[str] = Form(None),
+    description: Optional[str] = Form(None),
+    parallel: bool = Form(True),
+    prd_file: Optional[UploadFile] = File(None),
+):
+    # This is a plain (non-async) route on purpose: FastAPI/Starlette runs
+    # sync def routes in a worker thread, which is required because the
+    # orchestrator pipeline uses Playwright's *synchronous* API internally.
+    # Calling that blocking sync API directly from an `async def` route
+    # would execute it on the event loop thread and raise
+    # "Sync API inside asyncio loop".
+    try:
+        credentials = (
+            TestCredentials(username=username, password=password)
+            if username and password
+            else None
+        )
+        prd_text = None
+        if prd_file is not None and prd_file.filename:
+            raw = prd_file.file.read()
+            try:
+                prd_text = raw.decode("utf-8", errors="ignore")
+            except Exception:
+                prd_text = None
+        report = AIVAROrchestrator().run(
+            url, credentials, prd_text=prd_text, intent=description or None, parallel=parallel
+        )
+        store.save(report)
+        return report.model_dump()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/reports")
+def list_reports():
+    return [
+        {
+            "run_id": r.run_id,
+            "application_url": r.application_url,
+            "risk": r.risk,
+            "created_at": r.created_at,
+            "passed": r.passed,
+            "failed": r.failed,
+        }
+        for r in store.all_reports()
+    ]
+
+
+@app.get("/report/{run_id}/json")
+def report_json(run_id: str):
+    report = store.get(run_id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+    return report.model_dump()
+
+
+@app.get("/report/{run_id}/pdf")
+def report_pdf(run_id: str):
+    report = store.get(run_id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+    pdf_bytes = pdf_report.build_report_pdf(report)
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="aivar-report-{run_id}.pdf"'},
+    )
+
+
+# --- QR code sharing (temporarily disabled) ---------------------------------
+# @app.get("/report/{run_id}/qr")
+# def report_qr(run_id: str, request: Request):
+#     report = store.get(run_id)
+#     if not report:
+#         raise HTTPException(status_code=404, detail="Report not found")
+#     share_url = str(request.base_url).rstrip("/") + f"/report/{run_id}"
+#     png_bytes = qr_report.build_qr_png(share_url)
+#     return Response(content=png_bytes, media_type="image/png")
+@app.get("/report/{run_id}/qr")
+def report_qr(run_id: str):
+    raise HTTPException(status_code=503, detail="QR sharing is temporarily disabled")
+# ------------------------------------------------------------------------------
+
+
+@app.get("/report/{run_id}", response_class=HTMLResponse)
+def report_view(run_id: str):
+    report = store.get(run_id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+    return FileResponse("static/report.html")
