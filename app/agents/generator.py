@@ -1,4 +1,5 @@
 import json
+import os
 from urllib.parse import urljoin, urlsplit, urlunsplit
 
 from app.llm.client import LLMClient
@@ -24,6 +25,56 @@ class GeneratorAgent:
                 if step.get("action") == "fill" and field in {"username", "email", "password"}:
                     step["value"] = "[REDACTED]"
         return payload
+
+    @staticmethod
+    def _element_text(element):
+        return (element.text or element.label or element.name or "").strip()
+
+    @classmethod
+    def _observed_text(cls, observation, tags, keywords, fallback):
+        if not observation:
+            return fallback
+        lowered_keywords = tuple(keyword.lower() for keyword in keywords)
+        for element in observation.elements:
+            if element.tag not in tags:
+                continue
+            text = cls._element_text(element)
+            if text and any(keyword in text.lower() for keyword in lowered_keywords):
+                return text
+        return fallback
+
+    @classmethod
+    def _observed_heading(cls, observation):
+        if not observation:
+            return None
+        return next(
+            (
+                element.text.strip()
+                for element in observation.elements
+                if element.tag in {"h1", "h2", "h3"} and element.text.strip()
+            ),
+            None,
+        )
+
+    @classmethod
+    def _login_button_name(cls, observation):
+        if os.getenv("AIVAR_MOCK_LOGIN_RENAME_FAILURE", "").lower() in {"1", "true", "yes"}:
+            return "Login"
+        return cls._observed_text(
+            observation,
+            {"button"},
+            ("log in", "login", "sign in", "signin", "submit"),
+            "Login",
+        )
+
+    @classmethod
+    def _logout_button_name(cls, observation):
+        return cls._observed_text(
+            observation,
+            {"button"},
+            ("log out", "logout", "sign out", "signout"),
+            "Logout",
+        )
 
     @staticmethod
     def _add_authentication_prerequisite(test, observation, credentials):
@@ -73,10 +124,11 @@ class GeneratorAgent:
              if element.tag == "input" and (element.name or "").lower() == "password"),
             None,
         )
+        login_button_name = GeneratorAgent._login_button_name(observation)
         login_button = next(
             (element for element in observation.elements
              if element.tag == "button"
-             and element.text.strip().lower() in {"login", "sign in", "signin"}),
+             and GeneratorAgent._element_text(element).lower() == login_button_name.lower()),
             None,
         )
         if not username or not password or not login_button:
@@ -102,7 +154,7 @@ class GeneratorAgent:
             },
             {
                 "action": "click",
-                "target": {"role": "button", "name": login_button.text.strip()},
+                "target": {"role": "button", "name": GeneratorAgent._element_text(login_button)},
                 "value": None,
             },
         ]
@@ -297,6 +349,9 @@ class GeneratorAgent:
         if self.llm.provider == "mock":
 
             tests = []
+            login_button_name = self._login_button_name(observation)
+            logout_button_name = self._logout_button_name(observation)
+            observed_heading = self._observed_heading(observation)
 
             for scenario in plan.scenarios:
 
@@ -334,7 +389,7 @@ class GeneratorAgent:
                                     "action": "click",
                                     "target": {
                                         "role": "button",
-                                        "name": "Login",
+                                        "name": login_button_name,
                                     },
                                     "value": None,
                                 },
@@ -342,7 +397,7 @@ class GeneratorAgent:
                                     "action": "assert_visible",
                                     "target": {
                                         "role": "button",
-                                        "name": "Logout",
+                                        "name": logout_button_name,
                                     },
                                     "value": None,
                                 },
@@ -361,14 +416,6 @@ class GeneratorAgent:
 
                 # Generic fallback
                 else:
-                    observed_heading = next(
-                        (
-                            element.text.strip()
-                            for element in (observation.elements if observation else [])
-                            if element.tag in {"h1", "h2", "h3"} and element.text.strip()
-                        ),
-                        None,
-                    )
                     generic_steps = [
                         {
                             "action": "navigate",
@@ -382,12 +429,12 @@ class GeneratorAgent:
                             [
                                 {
                                     "action": "click",
-                                    "target": {"role": "button", "name": "Logout"},
+                                    "target": {"role": "button", "name": logout_button_name},
                                     "value": None,
                                 },
                                 {
                                     "action": "assert_visible",
-                                    "target": {"role": "button", "name": "Login"},
+                                    "target": {"role": "button", "name": login_button_name},
                                     "value": None,
                                 },
                             ]

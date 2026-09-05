@@ -2,117 +2,190 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>AIVAR — Autonomous Test Orchestration Agent</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>ATOA — Autonomous Test Orchestration Agent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/styles.css" />
 </head>
 <body>
 <header class="topbar">
-  <div class="brand"><img src="/static/logo.svg" alt="AIVAR logo" class="brand-logo" /> AIVAR</div>
-  <div class="tagline">Autonomous Test Orchestration · Aivar Innovations</div>
+  <a class="brand" href="/" aria-label="ATOA home">
+    <span class="brand-mark">ATOA</span>
+    <span>
+      <strong>ATOA</strong>
+      <small>Autonomous Test Orchestration Agent</small>
+    </span>
+  </a>
+  <div class="topbar-flow" aria-label="Pipeline summary">
+    <span>Pipeline</span>
+    <b>Observe</b>
+    <b>Generate</b>
+    <b>Run</b>
+    <b>Report</b>
+  </div>
+  <div class="topbar-status">
+    <span class="signal-dot"></span>
+    Ready
+  </div>
 </header>
 
-<main>
-  <div class="grid">
-    <!-- Run configuration -->
-    <section class="card">
-      <h2>Run pipeline</h2>
-      <form id="run-form">
-        <label>Application URL *</label>
-        <input id="url" type="url" placeholder="https://your-app.example" required />
+<main class="shell">
+  <section class="intro-panel reveal">
+    <div class="intro-copy">
+      <p class="eyebrow">Submission control room</p>
+      <h1>Live QA run console</h1>
+      <p>Point ATOA at a target, generate grounded scenarios, execute them, and hand judges a report that separates passed, healed, blocked, and failed work.</p>
+    </div>
+    <div class="intro-stats" aria-label="Pipeline guarantees">
+      <span>Grounded DOM</span>
+      <span>Credential safe</span>
+      <span>Healing gated</span>
+    </div>
+  </section>
 
-        <label>Describe intent (optional)</label>
+  <div class="console-grid">
+    <aside class="panel control-panel reveal reveal-delay-1">
+      <div class="section-head">
+        <p class="eyebrow">Target</p>
+        <h2>Run pipeline</h2>
+      </div>
+      <form id="run-form">
+        <label for="url">Application URL *</label>
+        <input id="url" type="url" placeholder="https://your-app.example" value="http://127.0.0.1:9100" required />
+
+        <label for="description">Describe intent (optional)</label>
         <textarea id="description" placeholder="e.g. focus on checkout and authentication flows"></textarea>
 
         <label>Product requirements document (optional)</label>
-        <div class="file-drop" id="file-drop">Click to attach a PRD (.txt/.md)</div>
-        <input type="file" id="prd_file" accept=".txt,.md,.doc,.docx,.pdf" style="display:none" />
+        <button class="file-drop" id="file-drop" type="button">
+          <i data-lucide="paperclip" aria-hidden="true"></i>
+          <span>Attach a PRD (.txt/.md)</span>
+        </button>
+        <input class="sr-only" type="file" id="prd_file" accept=".txt,.md,.doc,.docx,.pdf" />
 
-        <div class="row">
+        <div class="field-grid">
           <div>
-            <label>Username (optional)</label>
+            <label for="username">Username</label>
             <input id="username" type="text" placeholder="test-user" />
           </div>
           <div>
-            <label>Password (optional)</label>
-            <input id="password" type="password" placeholder="••••••••" />
+            <label for="password">Password</label>
+            <input id="password" type="password" placeholder="provided at runtime" />
           </div>
         </div>
 
-        <div class="toggle-line">
-          <span>Run scenarios in parallel</span>
-          <input type="checkbox" id="parallel" disabled />
-        </div>
-        <p style="color:var(--muted);font-size:11px;margin-top:-6px">Requires a purchased Browserless.io plan (parallel/concurrent browser sessions are not available on the free tier).</p>
-
-        <button class="primary" type="submit" id="run-btn">Run AIVAR</button>
-        <button class="ghost" type="button" id="clear-cache-btn" style="margin-top:10px;width:100%">🗑 Clear Cache</button>
-        <p id="cache-status" style="color:var(--muted);font-size:12px;margin-top:6px"></p>
+        <button class="primary" type="submit" id="run-btn">
+          <i data-lucide="play" aria-hidden="true"></i>
+          <span>Run ATOA</span>
+        </button>
+        <button class="ghost full-width" type="button" id="clear-cache-btn">
+          <i data-lucide="refresh-cw" aria-hidden="true"></i>
+          <span>Clear cache</span>
+        </button>
+        <p class="status-line" id="cache-status" aria-live="polite"></p>
       </form>
-    </section>
+    </aside>
 
-    <!-- Output -->
-    <section>
-      <div class="card" style="margin-bottom:20px">
-        <h2>Pipeline stages</h2>
-        <div class="stepper" id="stepper">
-          <div class="step" data-step="explore">Explore</div>
-          <div class="step" data-step="plan">Plan</div>
-          <div class="step" data-step="coverage">Coverage</div>
-          <div class="step" data-step="generate">Generate</div>
-          <div class="step" data-step="execute">Execute</div>
-          <div class="step" data-step="heal">Heal</div>
-          <div class="step" data-step="report">Report</div>
+    <section class="workspace reveal reveal-delay-2">
+      <div class="panel pipeline-panel">
+        <div class="section-head row-head">
+          <div>
+            <p class="eyebrow">Execution</p>
+            <h2>Pipeline stages</h2>
+          </div>
+          <span class="run-state" id="run-state">Idle</span>
+        </div>
+        <div class="stepper" id="stepper" aria-label="Pipeline stages">
+          <div class="step" data-step="explore"><span>01</span>Explore</div>
+          <div class="step" data-step="plan"><span>02</span>Plan</div>
+          <div class="step" data-step="coverage"><span>03</span>Coverage</div>
+          <div class="step" data-step="generate"><span>04</span>Generate</div>
+          <div class="step" data-step="execute"><span>05</span>Execute</div>
+          <div class="step" data-step="heal"><span>06</span>Heal</div>
+          <div class="step" data-step="report"><span>07</span>Report</div>
         </div>
         <div class="progress-wrap"><div class="progress-bar" id="progress-bar"></div></div>
-        <p class="progress-text" id="progress-text"></p>
+        <p class="progress-text" id="progress-text" aria-live="polite"></p>
       </div>
 
-      <div id="out-empty">Enter a URL and run AIVAR to see the test quality report here.</div>
+      <div class="empty-state" id="out-empty">
+        <div class="radar-glyph" aria-hidden="true">
+          <span></span><span></span><span></span>
+        </div>
+        <h2>Ready for a target.</h2>
+        <p>Enter a URL, attach optional requirements, and run the full test-quality loop.</p>
+      </div>
 
-      <div id="results" style="display:none">
-        <div class="card" style="margin-bottom:20px">
-          <h2>Quality report <span id="risk-badge"></span></h2>
+      <div id="results" class="results is-hidden">
+        <div class="panel report-hero">
+          <div class="section-head row-head">
+            <div>
+              <p class="eyebrow">Report</p>
+              <h2>Quality report</h2>
+            </div>
+            <span id="risk-badge"></span>
+          </div>
           <div class="metrics" id="metrics"></div>
           <div class="actions-row">
-            <button class="ghost" id="pdf-btn">⬇ Download PDF</button>
-            <button class="ghost" id="json-btn">{ } View raw JSON</button>
+            <button class="ghost" id="pdf-btn"><i data-lucide="file-down" aria-hidden="true"></i><span>Download PDF</span></button>
+            <button class="ghost" id="json-btn"><i data-lucide="braces" aria-hidden="true"></i><span>View raw JSON</span></button>
           </div>
         </div>
 
-        <div class="card" style="margin-bottom:20px">
-          <h2>Coverage gaps remaining</h2>
-          <div id="gaps"></div>
+        <div class="insight-grid">
+          <div class="panel">
+            <div class="section-head">
+              <p class="eyebrow">Coverage</p>
+              <h2>Gaps remaining</h2>
+            </div>
+            <div id="gaps"></div>
+          </div>
+          <div class="panel">
+            <div class="section-head">
+              <p class="eyebrow">Healing</p>
+              <h2>Healer actions</h2>
+            </div>
+            <div class="pill-list" id="healer-actions"></div>
+          </div>
         </div>
 
-        <div class="card" style="margin-bottom:20px">
-          <h2>Healer actions</h2>
-          <div class="pill-list" id="healer-actions"></div>
+        <div class="panel table-panel">
+          <div class="section-head">
+            <p class="eyebrow">Evidence</p>
+            <h2>Scenario outcomes</h2>
+          </div>
+          <div class="table-scroll">
+            <table>
+              <thead><tr><th>Test</th><th>Case</th><th>Status</th><th>Duration</th><th>Note</th><th>Screenshot</th></tr></thead>
+              <tbody id="results-table"></tbody>
+            </table>
+          </div>
         </div>
 
-        <div class="card" style="margin-bottom:20px">
-          <h2>Scenario outcomes</h2>
-          <table>
-            <thead><tr><th>Test</th><th>Case</th><th>Status</th><th>Duration</th><th>Note</th><th>Screenshot</th></tr></thead>
-            <tbody id="results-table"></tbody>
-          </table>
-        </div>
-
-        <div class="card" id="prd-card" style="display:none;margin-bottom:20px">
-          <h2>PRD coverage gap analysis</h2>
-          <p id="prd-summary" style="color:var(--muted);font-size:13px"></p>
+        <div class="panel is-hidden" id="prd-card">
+          <div class="section-head">
+            <p class="eyebrow">Requirements</p>
+            <h2>PRD coverage gap analysis</h2>
+          </div>
+          <p class="muted-copy" id="prd-summary"></p>
           <div id="prd-items"></div>
         </div>
       </div>
 
-      <div class="card">
-        <h2>Recent runs</h2>
-        <div id="history"><span style="color:var(--muted);font-size:13px">No runs yet.</span></div>
+      <div class="panel history-panel">
+        <div class="section-head">
+          <p class="eyebrow">Archive</p>
+          <h2>Recent runs</h2>
+        </div>
+        <div id="history"><span class="empty-copy">No runs yet.</span></div>
       </div>
     </section>
   </div>
 </main>
 
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 <script src="/static/app.js"></script>
 </body>
 </html>

@@ -1,16 +1,19 @@
 import time
-from typing import Literal, Optional
+from typing import ClassVar, Literal, Optional
 from pydantic import BaseModel, Field
 class ElementInfo(BaseModel):
     tag:str; text:str=""; role:Optional[str]=None; name:Optional[str]=None; label:Optional[str]=None; selector_hint:Optional[str]=None
 class ApplicationObservation(BaseModel):
     url:str; title:str=""; page_text:str=""; elements:list[ElementInfo]=Field(default_factory=list); links:list[str]=Field(default_factory=list); forms:list[str]=Field(default_factory=list)
 class TestCredentials(BaseModel):
+    __test__: ClassVar[bool] = False
     username:Optional[str]=None
     password:Optional[str]=None
 class TestScenario(BaseModel):
+    __test__: ClassVar[bool] = False
     id:str; name:str; flow:str; category:Literal["happy_path","negative","edge_case","error_state"]; priority:Literal["high","medium","low"]="medium"; expected_outcome:str
 class TestPlan(BaseModel):
+    __test__: ClassVar[bool] = False
     application_url:str; application_summary:str; scenarios:list[TestScenario]; assumptions:list[str]=Field(default_factory=list)
 class PRDGapItem(BaseModel):
     requirement:str; covered:bool; matched_scenario_id:Optional[str]=None; note:str=""
@@ -21,6 +24,7 @@ class CoverageGap(BaseModel):
 class CoverageAnalysis(BaseModel):
     score:float=Field(ge=0,le=1); covered_areas:list[str]=Field(default_factory=list); gaps:list[CoverageGap]=Field(default_factory=list); should_replan:bool; reasoning:str
 class TestStep(BaseModel):
+   __test__: ClassVar[bool] = False
    action:Literal["navigate","fill","select","click","check","uncheck","hover","press","assert_visible","assert_not_visible","assert_text","assert_url","assert_count","assert_checked","assert_enabled","assert_disabled"]; target:Optional[dict]=None; value:Optional[str]=None
 class GeneratedTest(BaseModel):
     id:str; scenario_id:str; name:str; steps:list[TestStep]; business_assertions:list[str]=Field(default_factory=list); requires_credentials:bool=False; credentials_available:bool=True

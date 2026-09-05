@@ -1,14 +1,22 @@
-# AIVAR — Autonomous Test Orchestration Agent
+# ATOA — Autonomous Test Orchestration Agent
 
-AIVAR is an autonomous QA orchestration system for web applications. It accepts a target URL, explores the live UI, plans meaningful test scenarios, checks coverage gaps, generates Playwright tests, executes them, and classifies failures as either recoverable UI drift or genuine application defects.
+ATOA is an autonomous QA orchestration system for web applications. It accepts a
+target URL, explores the live UI, plans meaningful test scenarios, checks
+coverage gaps, generates Playwright tests, executes them, and classifies
+failures as either recoverable UI drift or genuine application defects.
 
-The project was designed to demonstrate a closed-loop testing workflow in which AI reasoning is grounded in live browser observations and then constrained by deterministic validation before a locator or test step is accepted.
+The project demonstrates a closed-loop testing workflow where AI reasoning is
+grounded in live browser observations and constrained by deterministic
+validation before a locator or test step is accepted.
 
 ## Why this project exists
 
-Modern web applications change quickly. Labels, selectors, and page layouts often change without changing business intent, and that causes brittle automated tests. In many teams, regressions are detected late and the cost of fixing flaky tests is high.
+Modern web applications change quickly. Labels, selectors, and page layouts
+often change without changing business intent, which makes automated tests
+brittle. In many teams, regressions are detected late and the cost of fixing
+flaky tests is high.
 
-AIVAR addresses this by combining:
+ATOA addresses this by combining:
 
 - Live browser exploration from real pages
 - LLM-assisted planning grounded in observed app state
@@ -45,7 +53,9 @@ flowchart LR
     class J,K finalCls;
 ```
 
-The system is intentionally closed-loop. Coverage gaps can trigger replanning, and a potential selector fix is only accepted if it is supported by the live DOM and passes deterministic validation.
+The system is intentionally closed-loop. Coverage gaps can trigger replanning,
+and a potential selector fix is only accepted if it is supported by the live DOM
+and passes deterministic validation.
 
 ## Architecture overview
 
@@ -62,44 +72,52 @@ The exploration layer inspects the live UI using Playwright. It collects:
 - Navigation opportunities
 - Potential authentication or checkout flows
 
-This observation is the grounding source for all downstream planning and generation.
+This observation is the grounding source for all downstream planning and
+generation.
 
 ### 2. Planning layer
 
-The planner agent converts the observed app state into a structured test plan. It creates a set of scenarios such as:
+The planner agent converts the observed app state into a structured test plan.
+It creates scenarios such as:
 
 - Happy path flows
 - Negative validation cases
 - Edge conditions
 - Error-state scenarios
 
-It can also consider developer intent or a supplied PRD excerpt, but it must remain grounded in what the observed site actually supports.
+It can also consider developer intent or a supplied PRD excerpt, but it must
+remain grounded in what the observed site actually supports.
 
 ### 3. Coverage analysis layer
 
-The coverage agent evaluates whether the current scenario set is sufficiently broad. It checks whether the plan includes coverage across the key categories:
+The coverage agent evaluates whether the current scenario set is sufficiently
+broad. It checks whether the plan includes coverage across key categories:
 
 - Happy paths
 - Negative paths
 - Edge cases
 - Error states
 
-If coverage is below a configured threshold, the orchestrator can trigger a replan loop.
+If coverage is below a configured threshold, the orchestrator can trigger a
+replan loop.
 
 ### 4. Test generation layer
 
-The generator creates executable Playwright tests from the test plan. It adds prerequisite steps such as:
+The generator creates executable Playwright tests from the test plan. It adds
+prerequisite steps such as:
 
 - Login steps when credentials are available
 - Navigation or flow setup
 - Cart or checkout prerequisites where needed
 - Form input setup for realistic test journeys
 
-Generated tests also include business assertions and state checks tied to the expected user outcomes.
+Generated tests also include business assertions and state checks tied to the
+expected user outcomes.
 
 ### 5. Execution layer
 
-The executor runs the generated tests against the target application. It captures:
+The executor runs the generated tests against the target application. It
+captures:
 
 - Execution status
 - Assertions and failures
@@ -109,12 +127,15 @@ The executor runs the generated tests against the target application. It capture
 
 ### 6. Failure analysis and healing layer
 
-When a test fails, AIVAR classifies the issue before repair. Two important cases are handled:
+When a test fails, ATOA classifies the issue before repair. Two important cases
+are handled:
 
 - A locator mismatch or UI text drift that can be safely repaired
 - A real application defect that should be escalated instead of auto-healed
 
-The healing path uses deterministic validation to check if a candidate replacement is unique, visible, enabled, and consistent with the live DOM. If the evidence is weak or ambiguous, the system does not force a repair.
+The healing path uses deterministic validation to check if a candidate
+replacement is unique, visible, enabled, and consistent with the live DOM. If
+the evidence is weak or ambiguous, the system does not force a repair.
 
 ### 7. Reporting layer
 
@@ -131,7 +152,8 @@ The system can export JSON and PDF reports for demo and stakeholder review.
 
 ## Agent pipeline design
 
-The orchestration flow is implemented in the AIVAR orchestrator and follows a staged agent pipeline.
+The orchestration flow is implemented in the ATOA orchestrator and follows a
+staged agent pipeline.
 
 ### PlannerAgent
 
@@ -207,7 +229,8 @@ Responsible for:
 
 ## Data and execution flow
 
-AIVAR uses a structured model-driven workflow with Pydantic schemas for the core entities:
+ATOA uses a structured model-driven workflow with Pydantic schemas for the core
+entities:
 
 - Observations
 - Test plans
@@ -217,7 +240,8 @@ AIVAR uses a structured model-driven workflow with Pydantic schemas for the core
 - Healing proposals
 - Quality reports
 
-This makes the pipeline easier to reason about, validate, and report across different stages.
+This makes the pipeline easier to reason about, validate, and report across
+different stages.
 
 ## Project structure
 
@@ -273,7 +297,8 @@ tests/
 
 ## Environment configuration
 
-Create a local `.env` file from `.env.example` and configure your provider settings.
+Create a local `.env` file from `.env.example` and configure your provider
+settings.
 
 Supported providers:
 
@@ -297,11 +322,23 @@ MAX_REPLAN_ATTEMPTS=2
 MAX_HEAL_ATTEMPTS=1
 ```
 
-Important security note:
+Mock demo option:
+
+```text
+AIVAR_MOCK_LOGIN_RENAME_FAILURE=1
+```
+
+Use this only when demonstrating locator healing. It intentionally makes the
+mock generator look for a `Login` button so the demo page's `Sign In` button can
+exercise the healing path.
+
+Important security notes:
 
 - Do not commit real API keys or credentials.
 - Credentials are intentionally kept out of LLM prompts.
-- Authenticated scenarios are marked BLOCKED if credentials are missing.
+- Credentials are redacted from generator logs.
+- Authenticated scenarios are marked `BLOCKED` if credentials are missing.
+- Store real keys in an uncommitted `.env` file or a deployment secret manager.
 
 ## How to run locally
 
@@ -323,14 +360,17 @@ On Windows PowerShell:
 .\.venv\Scripts\Activate.ps1
 ```
 
-If PowerShell blocks the activation script because of execution policy restrictions, run:
+If PowerShell blocks the activation script because of execution policy
+restrictions, run:
 
 ```powershell
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\.venv\Scripts\Activate.ps1
 ```
 
-> Warning: this only affects the current PowerShell session and does not permanently change your system policy. It is a safe workaround for local development and demo runs.
+> Warning: this only affects the current PowerShell session and does not
+> permanently change your system policy. It is a safe workaround for local
+> development and demo runs.
 
 ### 2. Install dependencies
 
@@ -347,7 +387,7 @@ playwright install chromium
 ### 4. Start the FastAPI app
 
 ```bash
-uvicorn app.main:app --reload --port 8000
+uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
 Open the UI at:
@@ -358,13 +398,35 @@ http://127.0.0.1:8000
 
 ### 5. Run a demo target
 
-You can start the built-in demo app with:
+Start the included demo app in a second terminal:
 
 ```bash
 python scripts/serve_demo.py
 ```
 
-Then enter the local demo target URL into the web UI or use the API directly.
+The demo target runs at:
+
+```text
+http://127.0.0.1:9100
+```
+
+With both servers running, submit the demo target URL through the UI or run:
+
+```bash
+python scripts/run_demo.py
+```
+
+## Tests
+
+Run the focused unit test suite:
+
+```bash
+python -m pytest tests -q
+```
+
+Do not use unscoped `python -m pytest -q` unless you also intend to run
+`scripts/test_sarvam.py`. That script is a live provider smoke test and requires
+`SARVAM_API_KEY` at collection time.
 
 ## Running through the API
 
@@ -384,7 +446,26 @@ curl -X POST "http://127.0.0.1:8000/run" \
   -F "description=Validate login and logout flow"
 ```
 
-The response includes a structured `QualityReport` object with execution results and outcome summaries.
+The response includes a structured `QualityReport` object with execution results
+and outcome summaries.
+
+List reports:
+
+```bash
+curl http://127.0.0.1:8000/reports
+```
+
+Fetch a report:
+
+```bash
+curl http://127.0.0.1:8000/report/<run_id>/json
+```
+
+Clear cached artifacts:
+
+```bash
+curl -X POST http://127.0.0.1:8000/cache/clear
+```
 
 ## Demo scenarios
 
@@ -397,7 +478,7 @@ The project includes demo flows to validate the core logic:
    - Publish a quality report
 
 2. Safe locator healing
-   - Change a UI label such as “Login” to “Sign In”
+   - Change a UI label such as `Login` to `Sign In`
    - Show that the system identifies a failing locator candidate
    - Validate and accept a safe replacement
    - Re-run the test
@@ -409,7 +490,7 @@ The project includes demo flows to validate the core logic:
 
 ## Quality report output
 
-AIVAR produces rich reports showing:
+ATOA produces rich reports showing:
 
 - Test coverage score
 - Scenario totals
@@ -424,13 +505,21 @@ Reports can be downloaded in PDF or inspected in the UI.
 
 - Grounding over guessing: AI decisions must be based on live app observations.
 - Safe healing: never change a locator unless validation confirms it is valid.
-- Closed-loop execution: coverage gaps can trigger re-planning.
+- Closed-loop execution: coverage gaps can trigger replanning.
 - Evidence-first reporting: every outcome should be explainable.
 - No silent credential guessing: blocks are reported when authentication is incomplete.
 
+## Demo caveats
+
+The included static demo is a validation fixture, not a product benchmark. Real
+targets may have different authentication controls, routes, client-side state,
+and business flows. The planner and generator should use live observation and
+runtime credentials rather than assumptions from the fixture.
+
 ## Limitations and future work
 
-This is a strong prototype and hackathon-ready implementation, but there are opportunities for expansion:
+This is a strong prototype and hackathon-ready implementation, but there are
+opportunities for expansion:
 
 - Additional browser support beyond Chromium
 - More enterprise workflows and multi-page app scenarios
@@ -440,7 +529,8 @@ This is a strong prototype and hackathon-ready implementation, but there are opp
 
 ## Summary
 
-AIVAR demonstrates how autonomous QA can move beyond static script generation into a more adaptive system that:
+ATOA demonstrates how autonomous QA can move beyond static script generation
+into a more adaptive system that:
 
 - explores real product behavior,
 - plans realistic tests,
@@ -449,4 +539,5 @@ AIVAR demonstrates how autonomous QA can move beyond static script generation in
 - heals safe UI drift,
 - and escalates true defects responsibly.
 
-This makes it a practical blueprint for AI-assisted test orchestration in real software delivery environments.
+This makes it a practical blueprint for AI-assisted test orchestration in real
+software delivery environments.

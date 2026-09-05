@@ -40,6 +40,53 @@ def test_mock_login_uses_supplied_credentials():
     assert result.tests[0].credentials_available is True
 
 
+def test_mock_login_uses_observed_submit_button_name():
+    generator = GeneratorAgent.__new__(GeneratorAgent)
+    generator.llm = SimpleNamespace(provider="mock")
+    observation = ApplicationObservation(
+        url="http://example.test",
+        elements=[
+            ElementInfo(tag="input", name="username"),
+            ElementInfo(tag="input", name="password"),
+            ElementInfo(tag="button", text="Sign In"),
+            ElementInfo(tag="button", text="Logout"),
+        ],
+    )
+
+    result = generator.generate(
+        _plan(),
+        observation,
+        TestCredentials(username="alice", password="secret"),
+    )
+
+    click_steps = [step for step in result.tests[0].steps if step.action == "click"]
+    assert click_steps[0].target == {"role": "button", "name": "Sign In"}
+
+
+def test_mock_login_can_force_legacy_rename_failure(monkeypatch):
+    generator = GeneratorAgent.__new__(GeneratorAgent)
+    generator.llm = SimpleNamespace(provider="mock")
+    monkeypatch.setenv("AIVAR_MOCK_LOGIN_RENAME_FAILURE", "1")
+    observation = ApplicationObservation(
+        url="http://example.test",
+        elements=[
+            ElementInfo(tag="input", name="username"),
+            ElementInfo(tag="input", name="password"),
+            ElementInfo(tag="button", text="Sign In"),
+            ElementInfo(tag="button", text="Logout"),
+        ],
+    )
+
+    result = generator.generate(
+        _plan(),
+        observation,
+        TestCredentials(username="alice", password="secret"),
+    )
+
+    click_steps = [step for step in result.tests[0].steps if step.action == "click"]
+    assert click_steps[0].target == {"role": "button", "name": "Login"}
+
+
 def test_login_without_credentials_is_marked_blocked():
     generator = GeneratorAgent.__new__(GeneratorAgent)
     generator.llm = SimpleNamespace(provider="mock")
@@ -116,7 +163,8 @@ def test_logout_scenario_gets_login_prerequisite():
         elements=[
             ElementInfo(tag="input", name="username"),
             ElementInfo(tag="input", name="password"),
-            ElementInfo(tag="button", text="Login"),
+            ElementInfo(tag="button", text="Sign In"),
+            ElementInfo(tag="button", text="Logout"),
         ],
     )
 
@@ -128,3 +176,4 @@ def test_logout_scenario_gets_login_prerequisite():
 
     actions = [step.action for step in result.tests[0].steps]
     assert actions[:4] == ["navigate", "fill", "fill", "click"]
+    assert result.tests[0].steps[3].target == {"role": "button", "name": "Sign In"}

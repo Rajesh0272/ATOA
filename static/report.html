@@ -2,55 +2,91 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>AIVAR Report</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>ATOA Report</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/styles.css" />
 </head>
 <body>
 <header class="topbar">
-  <div class="brand"><img src="/static/logo.svg" alt="AIVAR logo" class="brand-logo" /> AIVAR</div>
-  <div class="tagline">Shared Test Quality Report</div>
-</header>
-<main>
-  <div class="actions-row" style="margin-bottom:16px">
-    <a class="ghost" id="back-btn" href="/">&larr; Back</a>
+  <a class="brand" href="/" aria-label="ATOA home">
+    <span class="brand-mark">ATOA</span>
+    <span>
+      <strong>ATOA</strong>
+      <small>Shared quality report</small>
+    </span>
+  </a>
+  <div class="topbar-flow" aria-label="Pipeline summary">
+    <span>Pipeline</span>
+    <b>Observe</b>
+    <b>Generate</b>
+    <b>Run</b>
+    <b>Report</b>
   </div>
-  <div class="card" style="margin-bottom:20px">
-    <h2>Quality report <span id="risk-badge"></span></h2>
+  <div class="topbar-status"><span class="signal-dot"></span> Locked</div>
+</header>
+<main class="shell report-shell">
+  <div class="actions-row page-actions">
+    <a class="ghost" id="back-btn" href="/"><i data-lucide="arrow-left" aria-hidden="true"></i><span>Back</span></a>
+  </div>
+  <div class="panel report-hero reveal">
+    <div class="section-head row-head">
+      <div>
+        <p class="eyebrow">Report</p>
+        <h2>Quality report</h2>
+      </div>
+      <span id="risk-badge"></span>
+    </div>
     <div class="metrics" id="metrics"></div>
     <div class="actions-row">
-      <button class="ghost" id="pdf-btn">Download PDF</button>
-      <button class="ghost" id="json-btn">View raw JSON</button>
+      <button class="ghost" id="pdf-btn"><i data-lucide="file-down" aria-hidden="true"></i><span>Download PDF</span></button>
+      <button class="ghost" id="json-btn"><i data-lucide="braces" aria-hidden="true"></i><span>View raw JSON</span></button>
     </div>
   </div>
-  <div class="card" style="margin-bottom:20px">
-    <h2>Coverage gaps remaining</h2>
-    <div id="gaps"></div>
+  <div class="insight-grid reveal reveal-delay-1">
+    <div class="panel">
+      <div class="section-head"><p class="eyebrow">Coverage</p><h2>Gaps remaining</h2></div>
+      <div id="gaps"></div>
+    </div>
+    <div class="panel">
+      <div class="section-head"><p class="eyebrow">Healing</p><h2>Healer actions</h2></div>
+      <div class="pill-list" id="healer-actions"></div>
+    </div>
   </div>
-  <div class="card" style="margin-bottom:20px">
-    <h2>Healer actions</h2>
-    <div class="pill-list" id="healer-actions"></div>
+  <div class="panel table-panel reveal reveal-delay-2">
+    <div class="section-head"><p class="eyebrow">Evidence</p><h2>Scenario outcomes</h2></div>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Test</th><th>Case</th><th>Status</th><th>Duration</th><th>Note</th><th>Screenshot</th></tr></thead>
+        <tbody id="results-table"></tbody>
+      </table>
+    </div>
   </div>
-  <div class="card" style="margin-bottom:20px">
-    <h2>Scenario outcomes</h2>
-    <table>
-      <thead><tr><th>Test</th><th>Case</th><th>Status</th><th>Duration</th><th>Note</th><th>Screenshot</th></tr></thead>
-      <tbody id="results-table"></tbody>
-    </table>
-  </div>
-  <div class="card" id="prd-card" style="display:none">
-    <h2>PRD coverage gap analysis</h2>
-    <p id="prd-summary" style="color:var(--muted);font-size:13px"></p>
+  <div class="panel is-hidden" id="prd-card">
+    <div class="section-head"><p class="eyebrow">Requirements</p><h2>PRD coverage gap analysis</h2></div>
+    <p class="muted-copy" id="prd-summary"></p>
     <div id="prd-items"></div>
   </div>
 </main>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 <script>
   const runId = location.pathname.split("/").filter(Boolean).pop();
   document.getElementById("pdf-btn").onclick = () => window.open("/report/" + runId + "/pdf", "_blank");
   document.getElementById("json-btn").onclick = () => window.open("/report/" + runId + "/json", "_blank");
 
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
   function metric(label, value) {
-    return '<div class="metric"><div class="num">' + value + '</div><div class="lbl">' + label + '</div></div>';
+    return '<div class="metric metric-' + label.toLowerCase() + '"><div class="num">' + escapeHtml(value) + '</div><div class="lbl">' + escapeHtml(label) + '</div></div>';
   }
 
   fetch("/report/" + runId + "/json")
@@ -70,13 +106,13 @@
 
       const gaps = r.coverage_gaps || [];
       document.getElementById("gaps").innerHTML = gaps.length
-        ? gaps.map((g) => '<div class="gap-item"><b>' + g.missing_scenario + '</b> (' + g.category + ') &mdash; <span class="risk ' + g.risk + '">' + g.risk + ' risk</span><br><span style="color:var(--muted)">' + g.reason + '</span></div>').join("")
-        : '<span style="color:var(--muted);font-size:13px">No coverage gaps remaining.</span>';
+        ? gaps.map((g) => '<div class="gap-item"><b>' + escapeHtml(g.missing_scenario) + '</b> (' + escapeHtml(g.category) + ') - <span class="risk ' + g.risk + '">' + escapeHtml(g.risk) + ' risk</span><br><span class="muted-copy">' + escapeHtml(g.reason) + '</span></div>').join("")
+        : '<span class="empty-copy">No coverage gaps remaining.</span>';
 
       const actions = r.healer_actions || [];
       document.getElementById("healer-actions").innerHTML = actions.length
-        ? actions.map((a) => '<span class="pill">' + a + '</span>').join("")
-        : '<span style="color:var(--muted);font-size:13px">No healer actions were required.</span>';
+        ? actions.map((a) => '<span class="pill">' + escapeHtml(a) + '</span>').join("")
+        : '<span class="empty-copy">No healer actions were required.</span>';
 
       const results = r.results || [];
       const scenarioNames = {};
@@ -88,22 +124,23 @@
           const caseName = scenarioNames[scenarioId] || "-";
           const shotUrl = "/report/" + runId + "/screenshot/" + res.test_id;
           const shotCell = SCREENSHOT_STATUSES.has(res.status) && res.screenshot_path
-            ? '<a href="' + shotUrl + '" target="_blank"><img class="thumb" src="' + shotUrl + '" alt="screenshot" onerror="this.closest(\'a\').style.display=\'none\'" /></a>'
-            : '<span style="color:var(--muted)">-</span>';
-          return '<tr><td>' + res.test_id + '</td><td>' + caseName + '</td><td class="status ' + res.status + '">' + res.status + '</td><td>' + res.duration_ms + ' ms</td><td>' + (res.healing_action || res.error || "-") + '</td><td>' + shotCell + '</td></tr>';
+            ? '<a href="' + shotUrl + '" target="_blank"><img class="thumb" src="' + shotUrl + '" alt="screenshot" /></a>'
+            : '<span class="empty-copy">-</span>';
+          return '<tr><td>' + escapeHtml(res.test_id) + '</td><td>' + escapeHtml(caseName) + '</td><td><span class="status ' + res.status + '">' + escapeHtml(res.status) + '</span></td><td>' + escapeHtml(res.duration_ms) + ' ms</td><td>' + escapeHtml(res.healing_action || res.error || "-") + '</td><td>' + shotCell + '</td></tr>';
         })
         .join("");
 
       const prd = r.prd_gap;
       const prdCard = document.getElementById("prd-card");
       if (prd && prd.requirements_considered) {
-        prdCard.style.display = "block";
+        prdCard.classList.remove("is-hidden");
         document.getElementById("prd-summary").textContent =
           prd.requirements_covered + "/" + prd.requirements_considered + " PRD requirements matched to a test scenario.";
         document.getElementById("prd-items").innerHTML = prd.items
-          .map((i) => '<div class="gap-item">' + (i.covered ? "\u2705" : "\u274c") + ' ' + i.requirement + '</div>')
+          .map((i) => '<div class="gap-item"><span class="status ' + (i.covered ? "PASSED" : "FAILED") + '">' + (i.covered ? "COVERED" : "GAP") + '</span> ' + escapeHtml(i.requirement) + '</div>')
           .join("");
       }
+      if (window.lucide) window.lucide.createIcons();
     });
 </script>
 </body>
