@@ -8,9 +8,7 @@ from app.orchestration.cache import clear_cache, ExecutionCache
 from app.browser.explorer import WebsiteUnreachableError
 from app.models.schemas import TestCredentials
 from app.reporting import store, pdf as pdf_report
-# NOTE: QR code sharing is temporarily disabled. Re-enable by uncommenting
-# the import below plus the /report/{run_id}/qr route further down.
-# from app.reporting import qr as qr_report
+from app.reporting import qr as qr_report
 
 app = FastAPI(title="AIVAR Autonomous QA")
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -122,18 +120,15 @@ def report_pdf(run_id: str):
     )
 
 
-# --- QR code sharing (temporarily disabled) ---------------------------------
-# @app.get("/report/{run_id}/qr")
-# def report_qr(run_id: str, request: Request):
-#     report = store.get(run_id)
-#     if not report:
-#         raise HTTPException(status_code=404, detail="Report not found")
-#     share_url = str(request.base_url).rstrip("/") + f"/report/{run_id}"
-#     png_bytes = qr_report.build_qr_png(share_url)
-#     return Response(content=png_bytes, media_type="image/png")
+# --- QR code sharing ---------------------------------------------------------
 @app.get("/report/{run_id}/qr")
-def report_qr(run_id: str):
-    raise HTTPException(status_code=503, detail="QR sharing is temporarily disabled")
+def report_qr(run_id: str, request: Request):
+    report = store.get(run_id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+    share_url = str(request.base_url).rstrip("/") + f"/report/{run_id}"
+    png_bytes = qr_report.build_qr_png(share_url)
+    return Response(content=png_bytes, media_type="image/png")
 # ------------------------------------------------------------------------------
 
 
