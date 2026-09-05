@@ -1,12 +1,5 @@
 {
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "bash vercel-build.sh",
-  "functions": {
-    "app/main.py": {
-      "runtime": "python3.11"
-    }
-  },
-  "env": {
-    "PLAYWRIGHT_BROWSERS_PATH": ".playwright"
-  }
+  "buildCommand": "pip install -r requirements.txt",
+  "outputDirectory": ".",
+  "functions": { "app/main.py": { "maxDuration": 300 } }
 }
