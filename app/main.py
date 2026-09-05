@@ -5,6 +5,7 @@ from typing import Optional
 
 from app.orchestration.orchestrator import AIVAROrchestrator
 from app.orchestration.cache import clear_cache, ExecutionCache
+from app.browser.explorer import WebsiteUnreachableError
 from app.models.schemas import TestCredentials
 from app.reporting import store, pdf as pdf_report
 # NOTE: QR code sharing is temporarily disabled. Re-enable by uncommenting
@@ -53,6 +54,8 @@ def run(
         )
         store.save(report)
         return report.model_dump()
+    except WebsiteUnreachableError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
