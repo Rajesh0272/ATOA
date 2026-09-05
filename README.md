@@ -1,5 +1,7 @@
 # AIVAR — Autonomous Test Orchestration Agent
 
+[![Live Demo](https://img.shields.io/badge/Live-Demo-22c55e?style=for-the-badge)](https://rag-repo-six.vercel.app/) [![Local Run](https://img.shields.io/badge/Local-Run-2563eb?style=for-the-badge)](#how-to-run-locally)
+
 AIVAR is an autonomous QA orchestration system for web applications. It accepts a target URL, explores the live UI, plans meaningful test scenarios, checks coverage gaps, generates Playwright tests, executes them, and classifies failures as either recoverable UI drift or genuine application defects.
 
 The project was designed to demonstrate a closed-loop testing workflow in which AI reasoning is grounded in live browser observations and then constrained by deterministic validation before a locator or test step is accepted.
@@ -17,6 +19,12 @@ AIVAR addresses this by combining:
 - Execution and evidence capture
 - Failure diagnosis and safe healing
 - Reporting for developers and project stakeholders
+
+## Live demo
+
+The application is deployed and accessible here:
+
+- https://rag-repo-six.vercel.app/
 
 ## High-level pipeline
 
