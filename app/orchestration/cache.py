@@ -15,7 +15,7 @@ from typing import Optional
 
 from app.models.schemas import CoverageAnalysis, ExecutionResult, GeneratedTest, TestPlan
 
-ARTIFACT_ROOT = Path("artifacts")
+ARTIFACT_ROOT = Path("/tmp/artifacts")
 
 # Statuses that must be re-verified even when the site has not changed.
 RERUN_STATUSES = {"FAILED", "HEALED", "ESCALATED"}
