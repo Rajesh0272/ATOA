@@ -1,7 +1,31 @@
 import json
+import re
 from typing import Any
 
 from app.config import settings
+
+
+def _repair_json_text(text: str) -> str:
+    """Best-effort cleanup for common LLM JSON formatting mistakes.
+
+    Sarvam (and other LLMs) occasionally emit JSON that is *almost* valid:
+    trailing commas before a closing ``}``/``]``, single-quoted strings,
+    or unquoted keys. ``json.loads`` rejects all of these with unhelpful
+    messages such as "Expecting property name enclosed in double quotes".
+    This performs conservative, regex-based fixes and returns the cleaned
+    text; callers should still validate with ``json.loads`` afterwards.
+    """
+
+    cleaned = text
+
+    # Remove trailing commas before a closing brace/bracket, e.g.
+    # `{"a": 1,}` -> `{"a": 1}` or `[1, 2,]` -> `[1, 2]`.
+    cleaned = re.sub(r",(\s*[}\]])", r"\1", cleaned)
+
+    # Quote unquoted object keys, e.g. `{key: "value"}` -> `{"key": "value"}`.
+    cleaned = re.sub(r'([{,]\s*)([A-Za-z_][A-Za-z0-9_]*)(\s*:)', r'\1"\2"\3', cleaned)
+
+    return cleaned
 
 
 class LLMClient:
@@ -229,13 +253,33 @@ USER/APPLICATION DATA:
         try:
             data = json.loads(raw_text)
 
-        except (json.JSONDecodeError, TypeError) as e:
+        except (json.JSONDecodeError, TypeError) as first_error:
 
-            print()
-            print("[ERROR] LLM returned invalid JSON")
-            print(f"[ERROR] {e}")
+            # First attempt failed. Try a best-effort repair (trailing
+            # commas, unquoted keys) before giving up — this recovers a
+            # large fraction of otherwise-fatal LLM formatting slips.
+            try:
+                repaired = _repair_json_text(raw_text) if isinstance(raw_text, str) else raw_text
+                data = json.loads(repaired)
 
-            raise
+                print()
+                print("[WARN] LLM JSON required repair (trailing commas / unquoted keys)")
+
+            except (json.JSONDecodeError, TypeError):
+
+                print()
+                print("[ERROR] LLM returned invalid JSON")
+                print(f"[ERROR] {first_error}")
+
+                if isinstance(raw_text, str):
+                    pos = getattr(first_error, "pos", None)
+                    if pos is not None:
+                        start = max(0, pos - 80)
+                        end = min(len(raw_text), pos + 80)
+                        print("[ERROR] Context around failure:")
+                        print(raw_text[start:end])
+
+                raise first_error
 
         print()
         print("[LLM OUTPUT - PARSED JSON]")
