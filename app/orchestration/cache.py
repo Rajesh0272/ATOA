@@ -13,7 +13,7 @@ import time
 from pathlib import Path
 from typing import Optional
 
-from app.models.schemas import ExecutionResult, GeneratedTest, TestPlan
+from app.models.schemas import CoverageAnalysis, ExecutionResult, GeneratedTest, TestPlan
 
 ARTIFACT_ROOT = Path("artifacts")
 
@@ -70,6 +70,7 @@ class ExecutionCache:
         self.tests_path = self.tests_dir / "tests.json"
         self.results_path = self.dir / "results.json"
         self.report_path = self.dir / "report.json"
+        self.coverage_path = self.dir / "coverage.json"
 
     # ------------------------------------------------------------------
     # Fingerprinting
@@ -152,6 +153,20 @@ class ExecutionCache:
         except Exception:
             return None
 
+    def load_coverage(self) -> Optional[CoverageAnalysis]:
+        """Load the last persisted CoverageAnalysis (score + gaps) for this
+        URL so a cache-hit run can display the real coverage picture from
+        the last time Planner/Coverage actually ran, instead of a
+        fabricated 100%/no-gaps placeholder."""
+        if not self.coverage_path.exists():
+            return None
+        try:
+            return CoverageAnalysis.model_validate(
+                json.loads(self.coverage_path.read_text(encoding="utf-8"))
+            )
+        except Exception:
+            return None
+
     # ------------------------------------------------------------------
     # Save
     # ------------------------------------------------------------------
@@ -168,6 +183,9 @@ class ExecutionCache:
         self.results_path.write_text(
             json.dumps([r.model_dump() for r in results], indent=2), encoding="utf-8"
         )
+
+    def save_coverage(self, coverage: CoverageAnalysis) -> None:
+        self.coverage_path.write_text(coverage.model_dump_json(indent=2), encoding="utf-8")
 
     def save_report(self, report: dict) -> None:
         """Persist the full QualityReport (as a plain dict) alongside this

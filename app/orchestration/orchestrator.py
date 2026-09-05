@@ -56,7 +56,11 @@ class AIVAROrchestrator:
                 order = [t.id for t in gen_tests]
                 results = [by_id[tid] for tid in order if tid in by_id]
 
-                cov = CoverageAnalysis(score=1.0, covered_areas=[], gaps=[], should_replan=False, reasoning="Reused from cache (website unchanged).")
+                cached_cov = cache.load_coverage()
+                cov = cached_cov if cached_cov is not None else CoverageAnalysis(
+                    score=1.0, covered_areas=[], gaps=[], should_replan=False,
+                    reasoning="Reused from cache (website unchanged); no prior coverage analysis was cached.",
+                )
             else:
                 reuse_possible = False
 
@@ -73,6 +77,7 @@ class AIVAROrchestrator:
 
             cache.save_plan(plan)
             cache.save_tests(gen_tests)
+            cache.save_coverage(cov)
 
         cache.save_results(results)
         cache.save_metadata(fingerprint, gen_tests)
