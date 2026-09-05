@@ -90,10 +90,13 @@ def build_report_pdf(report) -> bytes:
 
     if report.results:
         story.append(Paragraph("Scenario Outcomes", h2))
-        result_rows = [["Test ID", "Status", "Duration (ms)", "Note"]]
+        scenario_names = {s.id: s.name for s in report.scenarios}
+        result_rows = [["Test ID", "Case", "Status", "Duration (ms)", "Note"]]
         for r in report.results:
-            result_rows.append([r.test_id, r.status, str(r.duration_ms), (r.error or r.healing_action or "-")[:60]])
-        result_table = Table(result_rows, colWidths=[25 * mm, 22 * mm, 25 * mm, 73 * mm])
+            scenario_id = r.test_id.split("TC-", 1)[-1] if "TC-" in r.test_id else r.test_id
+            case_name = scenario_names.get(scenario_id, "-")
+            result_rows.append([r.test_id, case_name, r.status, str(r.duration_ms), (r.error or r.healing_action or "-")[:60]])
+        result_table = Table(result_rows, colWidths=[22 * mm, 45 * mm, 18 * mm, 22 * mm, 38 * mm])
         result_table.setStyle(TableStyle([
             ("BACKGROUND", (0, 0), (-1, 0), BRAND),
             ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
