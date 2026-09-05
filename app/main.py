@@ -10,7 +10,7 @@ from app.browser.explorer import WebsiteUnreachableError
 from app.models.schemas import TestCredentials
 from app.reporting import store, pdf as pdf_report
 
-app = FastAPI(title="AIVAR Autonomous QA")
+app = FastAPI(title="ATOA Autonomous Test Orchestration Agent")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 

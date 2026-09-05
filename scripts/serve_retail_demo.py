@@ -5,7 +5,7 @@ import os
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Serve the AIVAR retail demo.")
+    parser = argparse.ArgumentParser(description="Serve the ATOA retail demo.")
     parser.add_argument("--port", type=int, default=9100)
     args = parser.parse_args()
 

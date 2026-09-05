@@ -1,6 +1,6 @@
 # Demo Guide
 
-Use this guide when presenting AIVAR locally.
+Use this guide when presenting ATOA locally.
 
 ## Setup
 
@@ -63,5 +63,5 @@ Expected talking points:
 
 ## Good Closing Line
 
-AIVAR does not claim every generated test is correct. It records what it planned,
+ATOA does not claim every generated test is correct. It records what it planned,
 what it generated, what it actually executed, and what remains untested.

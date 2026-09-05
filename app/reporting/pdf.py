@@ -50,7 +50,7 @@ def build_report_pdf(report) -> bytes:
         return [Paragraph(str(v), header_style) for v in values]
 
     story = [
-        Paragraph("AIVAR — Autonomous Test Quality Report", title_style),
+        Paragraph("ATOA — Autonomous Test Orchestration Agent Report", title_style),
         Spacer(1, 4 * mm),
         Paragraph(f"Target application: {report.application_url}", body),
         Paragraph(f"Run ID: {report.run_id or 'n/a'}", body),
