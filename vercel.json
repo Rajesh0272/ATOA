@@ -3,11 +3,10 @@
   "buildCommand": "bash vercel-build.sh",
   "functions": {
     "app/main.py": {
-      "maxDuration": 300
+      "maxDuration": 800
     }
   },
   "env": {
     "PLAYWRIGHT_BROWSERS_PATH": "0"
   }
 }
-

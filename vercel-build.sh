@@ -1,4 +1,3 @@
-```bash
 #!/bin/bash
 set -e
 
@@ -19,4 +18,3 @@ python -m playwright install --list
 echo "========================================"
 echo "AIVAR Vercel build completed"
 echo "========================================"
-```
