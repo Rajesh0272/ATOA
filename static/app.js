@@ -30,6 +30,28 @@ async function animateStepper() {
   }
 }
 
+document.getElementById("clear-cache-btn").addEventListener("click", async () => {
+  const statusEl = document.getElementById("cache-status");
+  const btn = document.getElementById("clear-cache-btn");
+  const url = document.getElementById("url").value.trim();
+  btn.disabled = true;
+  statusEl.textContent = "Clearing cache...";
+  try {
+    const form = new FormData();
+    if (url) form.append("url", url);
+    const res = await fetch("/cache/clear", { method: "POST", body: form });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "Failed to clear cache");
+    statusEl.textContent = data.count
+      ? "Cache cleared" + (url ? " for this URL." : ` for ${data.count} URL(s).`)
+      : "No cache found" + (url ? " for this URL." : ".");
+  } catch (err) {
+    statusEl.textContent = "Error: " + err.message;
+  } finally {
+    btn.disabled = false;
+  }
+});
+
 document.getElementById("run-form").addEventListener("submit", async (e) => {
   e.preventDefault();
   const btn = document.getElementById("run-btn");

@@ -159,7 +159,7 @@ button.primary {
 button.primary:hover { background: var(--brand-dark); }
 button.primary:disabled { opacity: .6; cursor: progress; }
 
-button.ghost {
+button.ghost, a.ghost {
   background: #fff;
   color: var(--brand-dark);
   border: 1.5px solid var(--brand);
@@ -168,8 +168,10 @@ button.ghost {
   font-weight: 700;
   font-size: 13px;
   cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
 }
-button.ghost:hover { background: var(--brand-light); }
+button.ghost:hover, a.ghost:hover { background: var(--brand-light); }
 
 .stepper {
   display: flex;

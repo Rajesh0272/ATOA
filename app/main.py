@@ -4,6 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from typing import Optional
 
 from app.orchestration.orchestrator import AIVAROrchestrator
+from app.orchestration.cache import clear_cache
 from app.models.schemas import TestCredentials
 from app.reporting import store, pdf as pdf_report
 # NOTE: QR code sharing is temporarily disabled. Re-enable by uncommenting
@@ -54,6 +55,18 @@ def run(
         return report.model_dump()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/cache/clear")
+def cache_clear(url: Optional[str] = Form(None)):
+    """Clear cached execution artifacts (planner/generator/results/fingerprint).
+
+    If `url` is supplied, only that URL's cache directory is removed so the
+    next run for it executes the full Planner->Coverage->Generator pipeline.
+    If omitted, every cached URL is cleared.
+    """
+    removed = clear_cache(url or None)
+    return {"cleared": removed, "count": len(removed)}
 
 
 @app.get("/reports")
