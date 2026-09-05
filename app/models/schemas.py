@@ -27,7 +27,7 @@ class GeneratedTest(BaseModel):
 class GenerationResult(BaseModel):
     tests:list[GeneratedTest]
 class ExecutionResult(BaseModel):
-    test_id:str; status:Literal["PASSED","FAILED","HEALED","ESCALATED","BLOCKED"]; duration_ms:int=0; failed_step_index:Optional[int]=None; error:Optional[str]=None; artifacts_dir:Optional[str]=None; healing_action:Optional[str]=None
+    test_id:str; status:Literal["PASSED","FAILED","HEALED","ESCALATED","BLOCKED"]; duration_ms:int=0; failed_step_index:Optional[int]=None; error:Optional[str]=None; artifacts_dir:Optional[str]=None; healing_action:Optional[str]=None; screenshot_path:Optional[str]=None
 
 class StepExecutionError(RuntimeError):
     def __init__(self, step_index:int, step:TestStep, cause:Exception):

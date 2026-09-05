@@ -160,11 +160,16 @@ function renderReport(r) {
   const results = r.results || [];
   const scenarioNames = {};
   (r.scenarios || []).forEach((s) => { scenarioNames[s.id] = s.name; });
+  const SCREENSHOT_STATUSES = new Set(["FAILED", "HEALED", "ESCALATED"]);
   document.getElementById("results-table").innerHTML = results
     .map((res) => {
       const scenarioId = res.test_id.includes("TC-") ? res.test_id.split("TC-")[1] : res.test_id;
       const caseName = scenarioNames[scenarioId] || "-";
-      return '<tr><td>' + res.test_id + '</td><td>' + caseName + '</td><td class="status ' + res.status + '">' + res.status + '</td><td>' + res.duration_ms + ' ms</td><td>' + (res.healing_action || res.error || "-") + '</td></tr>';
+      const shotUrl = "/report/" + r.run_id + "/screenshot/" + res.test_id;
+      const shotCell = SCREENSHOT_STATUSES.has(res.status) && res.screenshot_path
+        ? '<a href="' + shotUrl + '" target="_blank"><img class="thumb" src="' + shotUrl + '" alt="screenshot" onerror="this.closest(\'a\').style.display=\'none\'" /></a>'
+        : '<span style="color:var(--muted)">-</span>';
+      return '<tr><td>' + res.test_id + '</td><td>' + caseName + '</td><td class="status ' + res.status + '">' + res.status + '</td><td>' + res.duration_ms + ' ms</td><td>' + (res.healing_action || res.error || "-") + '</td><td>' + shotCell + '</td></tr>';
     })
     .join("");
 
@@ -187,18 +192,6 @@ document.getElementById("pdf-btn").addEventListener("click", () => {
 });
 document.getElementById("json-btn").addEventListener("click", () => {
   if (currentReport) window.open("/report/" + currentReport.run_id + "/json", "_blank");
-});
-// QR sharing renders a scannable code linking to the shareable report page
-// (served by app/main.py's /report/{run_id}/qr route).
-document.getElementById("qr-btn").addEventListener("click", async () => {
-  if (!currentReport) return;
-  const probe = await fetch("/report/" + currentReport.run_id + "/qr");
-  if (!probe.ok) {
-    alert("Could not generate a QR code for this report.");
-    return;
-  }
-  document.getElementById("qr-img").src = "/report/" + currentReport.run_id + "/qr?t=" + Date.now();
-  document.getElementById("qr-modal").classList.add("open");
 });
 
 async function loadHistory() {

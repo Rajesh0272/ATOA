@@ -261,6 +261,15 @@ th { color: var(--muted); font-size: 11px; text-transform: uppercase; }
 .status.FAILED { color: var(--fail); }
 .status.ESCALATED { color: var(--warn); }
 .status.BLOCKED { color: var(--muted); }
+.thumb {
+  width: 64px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  display: block;
+}
 
 .actions-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
 

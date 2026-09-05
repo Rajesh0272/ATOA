@@ -1,6 +1,7 @@
-from fastapi import FastAPI, HTTPException, UploadFile, Form, File, Request
+from fastapi import FastAPI, HTTPException, UploadFile, Form, File
 from fastapi.responses import HTMLResponse, Response, FileResponse
 from fastapi.staticfiles import StaticFiles
+from pathlib import Path
 from typing import Optional
 
 from app.orchestration.orchestrator import AIVAROrchestrator
@@ -8,7 +9,6 @@ from app.orchestration.cache import clear_cache, ExecutionCache
 from app.browser.explorer import WebsiteUnreachableError
 from app.models.schemas import TestCredentials
 from app.reporting import store, pdf as pdf_report
-from app.reporting import qr as qr_report
 
 app = FastAPI(title="AIVAR Autonomous QA")
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -120,16 +120,23 @@ def report_pdf(run_id: str):
     )
 
 
-# --- QR code sharing ---------------------------------------------------------
-@app.get("/report/{run_id}/qr")
-def report_qr(run_id: str, request: Request):
+@app.get("/report/{run_id}/screenshot/{test_id}")
+def report_screenshot(run_id: str, test_id: str):
+    """Serve the failure screenshot captured for a specific scenario
+    (FAILED/HEALED/ESCALATED) in a given run, so the dashboard/shared
+    report page can show it and the PDF can embed it. Scoped to the
+    report's own results so a test_id can't be used to read arbitrary
+    files off disk."""
     report = store.get(run_id)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
-    share_url = str(request.base_url).rstrip("/") + f"/report/{run_id}"
-    png_bytes = qr_report.build_qr_png(share_url)
-    return Response(content=png_bytes, media_type="image/png")
-# ------------------------------------------------------------------------------
+    result = next((r for r in report.results if r.test_id == test_id), None)
+    if not result or not result.screenshot_path:
+        raise HTTPException(status_code=404, detail="No screenshot available for this test")
+    path = Path(result.screenshot_path)
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Screenshot file not found")
+    return FileResponse(str(path), media_type="image/png")
 
 
 @app.get("/report/{run_id}", response_class=HTMLResponse)
