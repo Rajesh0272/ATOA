@@ -181,8 +181,14 @@ function renderReport(r) {
     : '<span style="color:var(--muted);font-size:13px">No healer actions were required.</span>';
 
   const results = r.results || [];
+  const scenarioNames = {};
+  (r.scenarios || []).forEach((s) => { scenarioNames[s.id] = s.name; });
   document.getElementById("results-table").innerHTML = results
-    .map((res) => '<tr><td>' + res.test_id + '</td><td class="status ' + res.status + '">' + res.status + '</td><td>' + res.duration_ms + ' ms</td><td>' + (res.healing_action || res.error || "-") + '</td></tr>')
+    .map((res) => {
+      const scenarioId = res.test_id.includes("TC-") ? res.test_id.split("TC-")[1] : res.test_id;
+      const caseName = scenarioNames[scenarioId] || "-";
+      return '<tr><td>' + res.test_id + '</td><td>' + caseName + '</td><td class="status ' + res.status + '">' + res.status + '</td><td>' + res.duration_ms + ' ms</td><td>' + (res.healing_action || res.error || "-") + '</td></tr>';
+    })
     .join("");
 
   const prd = r.prd_gap;
@@ -230,10 +236,14 @@ async function loadHistory() {
     }
     el.innerHTML = items
       .slice(0, 8)
-      .map(
-        (i) =>
-          '<div class="history-item"><span>' + i.application_url + ' <span class="badge ' + i.risk + '">' + i.risk + '</span></span><a href="/report/' + i.run_id + '" target="_blank">View report &rarr;</a></div>'
-      )
+      .map((i) => {
+        const ts = i.created_at ? new Date(i.created_at * 1000).toLocaleString() : "";
+        return (
+          '<div class="history-item"><span>' + i.application_url + ' <span class="badge ' + i.risk + '">' + i.risk + '</span>' +
+          (ts ? '<br><span style="color:var(--muted);font-size:11px">' + ts + '</span>' : '') +
+          '</span><a href="/report/' + i.run_id + '" target="_blank">View report &rarr;</a></div>'
+        );
+      })
       .join("");
   } catch (e) {}
 }

@@ -33,9 +33,21 @@ class GeneratorAgent:
         has_login_click = any(
             step.action == "click"
             and step.target
-            and str(step.target.get("name") or "").lower() in {"login", "sign in", "signin"}
+            and any(
+                term in str(step.target.get("name") or "").lower()
+                for term in ("login", "log in", "sign in", "signin", "submit")
+            )
             for step in test.steps
         )
+        # A test that already fills *any* username/email/password field is
+        # already managing its own login flow (this also covers negative
+        # scenarios such as "empty password" that deliberately fill only
+        # one of the two fields) - injecting another prerequisite login
+        # would duplicate steps and, if no matching observed elements are
+        # found, incorrectly flip credentials_available to False even
+        # though real credentials were supplied. Previously this required
+        # >= 2 matching fill steps, which missed exactly those
+        # single-field negative scenarios.
         has_credential_fill = sum(
             1
             for step in test.steps
@@ -47,7 +59,7 @@ class GeneratorAgent:
                 or step.target.get("value")
                 or ""
             ).lower() in {"username", "email", "password"}
-        ) >= 2
+        ) >= 1
         if has_login_click or has_credential_fill:
             return
 
@@ -749,6 +761,7 @@ IMPORTANT:
             credentials.username,
             credentials.password,
         ) if credentials else (None, None        )
+        scenario_by_id = {s.id: s for s in plan.scenarios}
         for test in result.tests:
             needs_credentials = any(
                 step.action == "fill"
@@ -785,17 +798,26 @@ IMPORTANT:
                 or (credential_values[0] and credential_values[1])
             )
             if test.credentials_available and needs_credentials:
-                for step in test.steps:
-                    field = str(
-                        (step.target or {}).get("name")
-                        or (step.target or {}).get("label")
-                        or (step.target or {}).get("value")
-                        or ""
-                    ).lower()
-                    if step.action == "fill" and field in {"username", "email"}:
-                        step.value = credential_values[0]
-                    elif step.action == "fill" and field == "password":
-                        step.value = credential_values[1]
+                # Only substitute the configured real credentials into
+                # *happy-path* login tests. Negative/edge-case/error_state
+                # scenarios (invalid password, empty username, wrong
+                # password, etc.) deliberately fill these fields with
+                # test-specific values - overwriting them here would
+                # silently turn every negative login test into a
+                # duplicate happy-path test.
+                scenario = scenario_by_id.get(test.scenario_id)
+                if scenario is None or scenario.category == "happy_path":
+                    for step in test.steps:
+                        field = str(
+                            (step.target or {}).get("name")
+                            or (step.target or {}).get("label")
+                            or (step.target or {}).get("value")
+                            or ""
+                        ).lower()
+                        if step.action == "fill" and field in {"username", "email"}:
+                            step.value = credential_values[0]
+                        elif step.action == "fill" and field == "password":
+                            step.value = credential_values[1]
             self._add_authentication_prerequisite(test, observation, credentials)
             self._add_cart_prerequisite(test, observation)
             self._normalize_observed_targets(test, observation)

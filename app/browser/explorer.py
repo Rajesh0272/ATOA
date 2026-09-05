@@ -1,6 +1,34 @@
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright, Error as PlaywrightError
 from app.config import settings
 from app.models.schemas import ApplicationObservation,ElementInfo
+
+
+class WebsiteUnreachableError(Exception):
+    """Raised when the target URL cannot be loaded at all (connection
+    refused, DNS failure, timeout, etc.), as opposed to the page loading
+    but a test step failing against it. Callers should surface this as a
+    clear "website is not accessible" message instead of a raw Playwright
+    stack trace."""
+
+
+_UNREACHABLE_MARKERS = (
+    "err_connection_refused",
+    "err_connection_timed_out",
+    "err_connection_reset",
+    "err_connection_closed",
+    "err_name_not_resolved",
+    "err_internet_disconnected",
+    "err_address_unreachable",
+    "err_empty_response",
+    "net::err_",
+    "timeout",
+)
+
+
+def _is_unreachable_error(exc: Exception) -> bool:
+    message = str(exc).lower()
+    return any(marker in message for marker in _UNREACHABLE_MARKERS)
+
 
 class BrowserExplorer:
     def explore(self,url):
@@ -13,7 +41,19 @@ class BrowserExplorer:
         print("[ACTION] Launching Playwright browser...")
 
         with sync_playwright() as p:
-            b=p.chromium.launch(headless=settings.HEADLESS); page=b.new_page(); page.goto(url,wait_until="domcontentloaded",timeout=15000)
+            b=p.chromium.launch(headless=settings.HEADLESS); page=b.new_page()
+            try:
+                page.goto(url,wait_until="domcontentloaded",timeout=15000)
+            except PlaywrightError as exc:
+                b.close()
+                if _is_unreachable_error(exc):
+                    print(f"[ERROR] Website is not reachable: {exc}")
+                    raise WebsiteUnreachableError(
+                        f"The website at {url} is not accessible right now "
+                        "(connection refused/timed out or the address could not be resolved). "
+                        "Please verify the URL is correct and the site is running, then try again."
+                    ) from exc
+                raise
             els=[]
             for loc in page.locator("button,input,a,select,textarea,h1,h2,h3").all()[:150]:
                 try:
