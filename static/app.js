@@ -126,7 +126,6 @@ document.getElementById("run-form").addEventListener("submit", async (e) => {
   form.append("description", document.getElementById("description").value);
   form.append("username", document.getElementById("username").value);
   form.append("password", document.getElementById("password").value);
-  form.append("parallel", document.getElementById("parallel").checked);
   if (prdInput.files.length) form.append("prd_file", prdInput.files[0]);
 
   try {
