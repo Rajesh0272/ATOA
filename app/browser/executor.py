@@ -2,6 +2,7 @@ import json,time
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 from app.config import settings
+from app.browser.launcher import launch_chromium, new_page
 from app.healing.healer import Healer
 from app.models.schemas import *
 class TestExecutor:
@@ -17,9 +18,7 @@ class TestExecutor:
                 artifacts_dir=str(td),
             )
         with sync_playwright() as p:
-            b = p.chromium.launch(
-                headless=True,
-                args=["--no-sandbox","--disable-setuid-sandbox","--disable-dev-shm-usage","--disable-gpu"]); page=b.new_page()
+            b = launch_chromium(p); page = new_page(b)
             try:
                 self._run(page,test.steps)
                 self._validate_business_assertions(test)

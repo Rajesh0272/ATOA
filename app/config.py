@@ -21,6 +21,7 @@ class Settings:
 
     # AIVAR
     HEADLESS = os.getenv("AIVAR_HEADLESS", "false").lower() == "true"
+
     COVERAGE_THRESHOLD = float(os.getenv("COVERAGE_THRESHOLD", "0.75"))
     MAX_REPLAN_ATTEMPTS = int(os.getenv("MAX_REPLAN_ATTEMPTS", "2"))
     MAX_HEAL_ATTEMPTS = int(os.getenv("MAX_HEAL_ATTEMPTS", "1"))

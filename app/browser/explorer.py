@@ -1,5 +1,6 @@
 from playwright.sync_api import sync_playwright, Error as PlaywrightError
 from app.config import settings
+from app.browser.launcher import launch_chromium, new_page
 from app.models.schemas import ApplicationObservation,ElementInfo
 
 
@@ -41,7 +42,7 @@ class BrowserExplorer:
         print("[ACTION] Launching Playwright browser...")
 
         with sync_playwright() as p:
-            b=p.chromium.launch(headless=settings.HEADLESS); page=b.new_page()
+            b = launch_chromium(p, headless=settings.HEADLESS); page = new_page(b)
             try:
                 page.goto(url,wait_until="domcontentloaded",timeout=15000)
             except PlaywrightError as exc:
