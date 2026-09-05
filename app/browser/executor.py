@@ -23,8 +23,15 @@ class TestExecutor:
                 self._validate_business_assertions(test)
                 return ExecutionResult(test_id=test.id,status="PASSED",duration_ms=int((time.time()-start)*1000),artifacts_dir=str(td))
             except Exception as e:
-                try: page.screenshot(path=str(td/"failure.png"),full_page=True)
-                except Exception: pass
+                screenshot_path = td/"failure.png"
+                try:
+                    page.screenshot(path=str(screenshot_path),full_page=True)
+                except Exception:
+                    screenshot_path = None
+                else:
+                    if not screenshot_path.exists():
+                        screenshot_path = None
+                screenshot_path = str(screenshot_path) if screenshot_path else None
                 dom=page.content()
                 try: (td/"dom.html").write_text(dom,encoding="utf-8")
                 except Exception: pass
@@ -55,6 +62,7 @@ class TestExecutor:
                             error="Healing diagnosis did not identify a replaceable failed locator step.",
                             artifacts_dir=str(td),
                             healing_action=h.action,
+                            screenshot_path=screenshot_path,
                         )
                     steps[failed_index].target = h.diagnosis.healing_candidate
                     try:
@@ -62,12 +70,12 @@ class TestExecutor:
                         self._run(page,steps)
                         self._validate_business_assertions(test.model_copy(update={"steps": steps}))
                         (td/"healing.json").write_text(h.model_dump_json(indent=2),encoding="utf-8")
-                        return ExecutionResult(test_id=test.id,status="HEALED",duration_ms=int((time.time()-start)*1000),artifacts_dir=str(td),healing_action=h.action)
-                    except Exception as re: return ExecutionResult(test_id=test.id,status="FAILED",duration_ms=int((time.time()-start)*1000),error=f"Full retest failed: {re}",artifacts_dir=str(td))
+                        return ExecutionResult(test_id=test.id,status="HEALED",duration_ms=int((time.time()-start)*1000),artifacts_dir=str(td),healing_action=h.action,screenshot_path=screenshot_path)
+                    except Exception as re: return ExecutionResult(test_id=test.id,status="FAILED",duration_ms=int((time.time()-start)*1000),error=f"Full retest failed: {re}",artifacts_dir=str(td),screenshot_path=screenshot_path)
                 if h.status=="ESCALATED":
                     (td/"healing.json").write_text(h.model_dump_json(indent=2),encoding="utf-8")
-                    return ExecutionResult(test_id=test.id,status="ESCALATED",duration_ms=int((time.time()-start)*1000),error=str(e),artifacts_dir=str(td),healing_action=h.action)
-                return ExecutionResult(test_id=test.id,status="FAILED",duration_ms=int((time.time()-start)*1000),error=str(e),artifacts_dir=str(td),healing_action=h.action)
+                    return ExecutionResult(test_id=test.id,status="ESCALATED",duration_ms=int((time.time()-start)*1000),error=str(e),artifacts_dir=str(td),healing_action=h.action,screenshot_path=screenshot_path)
+                return ExecutionResult(test_id=test.id,status="FAILED",duration_ms=int((time.time()-start)*1000),error=str(e),artifacts_dir=str(td),healing_action=h.action,screenshot_path=screenshot_path)
             finally: b.close()
     def _validate_business_assertions(self, test):
         assertion_steps = sum(

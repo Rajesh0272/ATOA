@@ -1,12 +1,14 @@
 """Renders a QualityReport into a downloadable PDF using reportlab."""
 
 import io
+from pathlib import Path
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.platypus import (
+    Image,
     Paragraph,
     SimpleDocTemplate,
     Spacer,
@@ -15,6 +17,10 @@ from reportlab.platypus import (
 )
 
 BRAND = colors.HexColor("#7a68ff")
+
+# Screenshots are only meaningful for scenarios that didn't cleanly pass -
+# these are the statuses where TestExecutor captures a failure.png.
+SCREENSHOT_STATUSES = {"FAILED", "HEALED", "ESCALATED"}
 
 
 def build_report_pdf(report) -> bytes:
@@ -120,6 +126,25 @@ def build_report_pdf(report) -> bytes:
             ("VALIGN", (0, 0), (-1, -1), "TOP"),
         ]))
         story += [result_table, Spacer(1, 6 * mm)]
+
+        screenshot_results = [
+            r for r in report.results
+            if r.status in SCREENSHOT_STATUSES
+            and r.screenshot_path
+            and Path(r.screenshot_path).exists()
+        ]
+        if screenshot_results:
+            story.append(Paragraph("Failure Screenshots", h2))
+            for r in screenshot_results:
+                scenario_id = r.test_id.split("TC-", 1)[-1] if "TC-" in r.test_id else r.test_id
+                case_name = scenario_names.get(scenario_id, r.test_id)
+                story.append(Paragraph(f"<b>{r.test_id}</b> — {case_name} ({r.status})", body))
+                try:
+                    img = Image(r.screenshot_path, width=160 * mm, height=90 * mm, kind="proportional")
+                    story.append(img)
+                except Exception:
+                    story.append(Paragraph("(screenshot could not be embedded)", body))
+                story.append(Spacer(1, 4 * mm))
 
     if report.prd_gap and report.prd_gap.requirements_considered:
         story.append(Paragraph("PRD Coverage Gap Analysis", h2))
