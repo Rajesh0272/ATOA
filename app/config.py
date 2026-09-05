@@ -31,6 +31,17 @@ class Settings:
     # that already has it installed).
     BROWSER_WS_ENDPOINT = os.getenv("BROWSER_WS_ENDPOINT", "")
 
+    # Vercel KV (Upstash Redis REST API). Vercel injects these automatically
+    # once a KV store is linked to the project. When set, completed reports
+    # are persisted here in addition to the in-process dict, so a report
+    # started by one serverless instance can still be fetched by a
+    # different instance handling a later request (e.g. a shared report
+    # URL) - the in-memory store alone does not survive across instances
+    # on a stateless host like Vercel. Leave unset to run purely in-memory
+    # (e.g. local dev, or any host that keeps a single long-lived process).
+    KV_REST_API_URL = os.getenv("KV_REST_API_URL", "")
+    KV_REST_API_TOKEN = os.getenv("KV_REST_API_TOKEN", "")
+
     COVERAGE_THRESHOLD = float(os.getenv("COVERAGE_THRESHOLD", "0.75"))
     MAX_REPLAN_ATTEMPTS = int(os.getenv("MAX_REPLAN_ATTEMPTS", "2"))
     MAX_HEAL_ATTEMPTS = int(os.getenv("MAX_HEAL_ATTEMPTS", "1"))
