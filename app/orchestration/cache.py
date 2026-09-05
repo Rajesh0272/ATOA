@@ -32,6 +32,32 @@ def url_slug(url: str) -> str:
     return slug[:80]
 
 
+def clear_cache(url: Optional[str] = None, artifact_root: Path = ARTIFACT_ROOT) -> list[str]:
+    """Delete cached execution artifacts.
+
+    If `url` is given, only that URL's cache directory is removed.
+    Otherwise every cached URL directory under `artifact_root` is removed.
+    Returns the list of directory names that were removed.
+    """
+    import shutil
+
+    root = Path(artifact_root)
+    if url:
+        target = root / url_slug(url)
+        if target.exists():
+            shutil.rmtree(target)
+            return [target.name]
+        return []
+
+    removed = []
+    if root.exists():
+        for child in root.iterdir():
+            if child.is_dir():
+                shutil.rmtree(child)
+                removed.append(child.name)
+    return removed
+
+
 class ExecutionCache:
     def __init__(self, url: str, artifact_root: Path = ARTIFACT_ROOT):
         self.url = url
