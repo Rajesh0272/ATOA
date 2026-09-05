@@ -132,31 +132,10 @@ function metric(label, value) {
   return '<div class="metric"><div class="num">' + value + '</div><div class="lbl">' + label + '</div></div>';
 }
 
-function executionSourceHtml(r) {
-  const executorNote = r.cache_hit && !r.website_changed
-    ? (r.tests_reexecuted > 0
-        ? 'Partial (' + r.tests_reexecuted + ' re-executed, ' + r.tests_reused + ' reused from cache)'
-        : 'No (all ' + r.tests_reused + ' cached results reused)')
-    : 'Yes (full run, ' + r.total_executed + ' test(s))';
-  const rows = [
-    ['Cache Hit', r.cache_hit ? 'Yes' : 'No'],
-    ['Website Changed', r.website_changed ? 'Yes' : 'No'],
-    ['Planner Executed', r.planner_executed ? 'Yes' : 'No'],
-    ['Generator Executed', r.generator_executed ? 'Yes' : 'No'],
-    ['Executor Executed', executorNote],
-    ['LLM Calls Saved', r.llm_calls_saved > 0 ? 'Yes (' + r.llm_calls_saved + ')' : 'No'],
-    ['Estimated Credit Saving', r.estimated_credit_saving || '0%'],
-  ];
-  return rows.map((row) =>
-    '<div class="gap-item"><b>' + row[0] + ':</b> ' + row[1] + '</div>'
-  ).join("");
-}
-
 function renderReport(r) {
   currentReport = r;
   document.getElementById("results").style.display = "block";
   document.getElementById("risk-badge").innerHTML = '<span class="badge ' + r.risk + '">' + r.risk + ' RISK</span>';
-  document.getElementById("summary-text").textContent = r.summary;
   document.getElementById("metrics").innerHTML = [
     metric("Planned", r.total_planned),
     metric("Generated", r.total_generated),
@@ -167,8 +146,6 @@ function renderReport(r) {
     metric("Escalated", r.escalated),
     metric("Blocked", r.blocked),
   ].join("");
-
-  document.getElementById("execution-source").innerHTML = executionSourceHtml(r);
 
   const gaps = r.coverage_gaps || [];
   document.getElementById("gaps").innerHTML = gaps.length
@@ -211,14 +188,13 @@ document.getElementById("pdf-btn").addEventListener("click", () => {
 document.getElementById("json-btn").addEventListener("click", () => {
   if (currentReport) window.open("/report/" + currentReport.run_id + "/json", "_blank");
 });
-// QR sharing is temporarily disabled server-side; keep the button wired so
-// re-enabling app/main.py's /report/{run_id}/qr route lights this back up
-// without any frontend changes.
+// QR sharing renders a scannable code linking to the shareable report page
+// (served by app/main.py's /report/{run_id}/qr route).
 document.getElementById("qr-btn").addEventListener("click", async () => {
   if (!currentReport) return;
   const probe = await fetch("/report/" + currentReport.run_id + "/qr");
   if (!probe.ok) {
-    alert("QR sharing is temporarily disabled.");
+    alert("Could not generate a QR code for this report.");
     return;
   }
   document.getElementById("qr-img").src = "/report/" + currentReport.run_id + "/qr?t=" + Date.now();

@@ -18,19 +18,15 @@
   <div class="card" style="margin-bottom:20px">
     <h2>Quality report <span id="risk-badge"></span></h2>
     <div class="metrics" id="metrics"></div>
-    <p id="summary-text" style="color:var(--muted);font-size:13px"></p>
     <div class="actions-row">
       <button class="ghost" id="pdf-btn">Download PDF</button>
+      <button class="ghost" id="qr-btn">View QR to share report</button>
       <button class="ghost" id="json-btn">View raw JSON</button>
     </div>
   </div>
   <div class="card" style="margin-bottom:20px">
     <h2>Coverage gaps remaining</h2>
     <div id="gaps"></div>
-  </div>
-  <div class="card" style="margin-bottom:20px">
-    <h2>Execution source</h2>
-    <div id="execution-source"></div>
   </div>
   <div class="card" style="margin-bottom:20px">
     <h2>Healer actions</h2>
@@ -49,40 +45,36 @@
     <div id="prd-items"></div>
   </div>
 </main>
+<div class="modal-bg" id="qr-modal">
+  <div class="modal">
+    <h3 style="color:var(--brand-dark);margin-top:0">Scan to view report</h3>
+    <img id="qr-img" src="" alt="QR code" />
+    <p style="font-size:12px;color:var(--muted)">Opens the shareable report page on another device</p>
+    <button class="ghost" onclick="document.getElementById('qr-modal').classList.remove('open')">Close</button>
+  </div>
+</div>
 <script>
   const runId = location.pathname.split("/").filter(Boolean).pop();
   document.getElementById("pdf-btn").onclick = () => window.open("/report/" + runId + "/pdf", "_blank");
   document.getElementById("json-btn").onclick = () => window.open("/report/" + runId + "/json", "_blank");
+  document.getElementById("qr-btn").onclick = async () => {
+    const probe = await fetch("/report/" + runId + "/qr");
+    if (!probe.ok) {
+      alert("QR sharing is temporarily unavailable.");
+      return;
+    }
+    document.getElementById("qr-img").src = "/report/" + runId + "/qr?t=" + Date.now();
+    document.getElementById("qr-modal").classList.add("open");
+  };
 
   function metric(label, value) {
     return '<div class="metric"><div class="num">' + value + '</div><div class="lbl">' + label + '</div></div>';
-  }
-
-  function executionSourceHtml(r) {
-    const executorNote = r.cache_hit && !r.website_changed
-      ? (r.tests_reexecuted > 0
-          ? 'Partial (' + r.tests_reexecuted + ' re-executed, ' + r.tests_reused + ' reused from cache)'
-          : 'No (all ' + r.tests_reused + ' cached results reused)')
-      : 'Yes (full run, ' + r.total_executed + ' test(s))';
-    const rows = [
-      ['Cache Hit', r.cache_hit ? 'Yes' : 'No'],
-      ['Website Changed', r.website_changed ? 'Yes' : 'No'],
-      ['Planner Executed', r.planner_executed ? 'Yes' : 'No'],
-      ['Generator Executed', r.generator_executed ? 'Yes' : 'No'],
-      ['Executor Executed', executorNote],
-      ['LLM Calls Saved', r.llm_calls_saved > 0 ? 'Yes (' + r.llm_calls_saved + ')' : 'No'],
-      ['Estimated Credit Saving', r.estimated_credit_saving || '0%'],
-    ];
-    return rows.map((row) =>
-      '<div class="gap-item"><b>' + row[0] + ':</b> ' + row[1] + '</div>'
-    ).join("");
   }
 
   fetch("/report/" + runId + "/json")
     .then((r) => r.json())
     .then((r) => {
       document.getElementById("risk-badge").innerHTML = '<span class="badge ' + r.risk + '">' + r.risk + ' RISK</span>';
-      document.getElementById("summary-text").textContent = r.summary;
       document.getElementById("metrics").innerHTML = [
         metric("Planned", r.total_planned),
         metric("Generated", r.total_generated),
@@ -93,8 +85,6 @@
         metric("Escalated", r.escalated),
         metric("Blocked", r.blocked),
       ].join("");
-
-      document.getElementById("execution-source").innerHTML = executionSourceHtml(r);
 
       const gaps = r.coverage_gaps || [];
       document.getElementById("gaps").innerHTML = gaps.length
