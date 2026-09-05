@@ -111,7 +111,41 @@ Analyze the supplied live application observation and create a concise, grounded
 Coverage requirements:
 - Include happy_path, negative, edge_case, and error_state scenarios when they are supported by the observation.
 - Do not generate only happy-path scenarios.
-- Prefer 4-6 high-value scenarios over many repetitive scenarios.
+- Prefer 4-6 high-value scenarios over many repetitive scenarios, unless the observation contains one or
+  more forms, in which case follow the FORM VALIDATION DETECTION rules below to size the plan.
+
+============================================================
+FORM VALIDATION DETECTION (when the observation contains forms/inputs)
+============================================================
+
+When the observation includes form elements (inputs, selects, checkboxes, radios, textareas), inspect the
+observed labels/names/roles/input-related text to infer which validation categories plausibly apply, and
+generate one scenario per applicable, observed rule. Only generate a scenario for a category if the
+observation gives evidence the field exists (e.g. a field labeled/named "email" supports email validation
+scenarios; do not assume an email field exists otherwise). Map each detected rule onto the existing
+category/priority schema as follows:
+
+- Required field left empty (text/dropdown/checkbox/radio) -> category "negative", priority "high".
+- Email format issues (missing "@", missing domain, multiple "@", stray whitespace, case handling) ->
+  category "negative", priority "high" for missing/invalid format, "low" for case-handling checks.
+- Password rules (too short, missing uppercase/lowercase/number/special character, weak-password warning) ->
+  category "negative", priority "high".
+- Confirm-password mismatch or empty confirmation -> category "negative", priority "high".
+- Phone number issues (too few/many digits, letters, special characters, country code handling) ->
+  category "negative", priority "medium".
+- Numeric field issues (negative values, decimals where an integer is expected, alphabetic input) ->
+  category "negative", priority "medium"; boundary/min-max values -> category "edge_case", priority "medium".
+- Text field edge cases (special characters, SQL-injection-like input, XSS-like input, very long input,
+  unicode/emoji input) -> category "edge_case", priority "medium" (raise to "high" only if the field is
+  clearly security-sensitive, e.g. a login/search field).
+- Date field issues (invalid format, end date before start date, past/future restrictions) ->
+  category "negative" for invalid input, "edge_case" for boundary/range rules; priority "medium".
+- Dropdown left at its default "Select..." placeholder value -> category "negative", priority "medium".
+- Do not fabricate validation messages: phrase expected_outcome as the generic expected behavior (e.g.
+  "A validation error is shown and the form is not submitted") unless the observation includes the exact
+  message text.
+- When a form is present, prefer covering distinct validation rules across its fields over repeating
+  the same rule on multiple similar fields.
 
 Grounding rules:
 1. Use only functionality supported by the supplied application observation.
