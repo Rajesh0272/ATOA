@@ -8,10 +8,11 @@ echo "========================================"
 echo "Installing Python dependencies..."
 pip install -r requirements.txt
 
-echo "Installing Playwright Chromium..."
+echo "Installing Playwright Chromium inside the deployment..."
+export PLAYWRIGHT_BROWSERS_PATH=0
 python -m playwright install chromium
 
-echo "Checking Playwright installation..."
+echo "Verifying installation..."
 python -m playwright install --list
 
 echo "========================================"
